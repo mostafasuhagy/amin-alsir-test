@@ -2,7 +2,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
-import os, re
+import os, re, json
 from datetime import datetime
 
 SCOPES = [
@@ -14,120 +14,85 @@ SHEET_NAME   = "amin_alsir_cases_new_V2"
 CLIENTS_TAB  = "Clients"
 
 def get_sheet():
-    creds_path = os.path.join(os.path.dirname(__file__), "..", "credentials.json")
-    creds  = Credentials.from_service_account_file(creds_path, scopes=SCOPES)
+    creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+    creds_dict = json.loads(creds_json)
+    creds  = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     client = gspread.authorize(creds)
     sh     = client.open(SHEET_NAME)
     try:
         ws = sh.worksheet(CLIENTS_TAB)
-    except gspread.exceptions.WorksheetNotFound:
-        ws = sh.add_worksheet(title=CLIENTS_TAB, rows=1000, cols=10)
-        ws.append_row(["كود العميل", "الاسم", "الرقم القومي", "الموبايل", "تاريخ الإضافة"])
+    except:
+        ws = sh.add_worksheet(title=CLIENTS_TAB, rows=1000, cols=20)
+        ws.append_row(["كود العميل","الاسم","الرقم القومي","الموبايل","العنوان","تاريخ التسجيل"])
     return ws
 
-def next_client_code(ws) -> str:
-    all_values = ws.col_values(1)
-    codes = [v for v in all_values[1:] if v.startswith("Cl-")]
-    if not codes:
-        return "Cl-001"
-    last_num = max(int(c.split("-")[1]) for c in codes)
-    return f"Cl-{last_num + 1:03d}"
+def generate_client_code(ws):
+    records = ws.get_all_records()
+    return f"Cl-{len(records)+1:03d}"
 
-WAIT_NAME, WAIT_ID, WAIT_PHONE = range(3)
+STEPS = ["name","national_id","mobile","address"]
+PROMPTS = {
+    "name":        "👤 أدخل *اسم العميل* كاملاً:",
+    "national_id": "🪪 أدخل *الرقم القومي* (14 رقم):",
+    "mobile":      "📱 أدخل *رقم الموبايل* (01XXXXXXXXX):",
+    "address":     "🏠 أدخل *عنوان العميل*:",
+}
 
 async def handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """نقطة الدخول — تُستدعى من main.py عند الضغط على زر F001"""
-    context.user_data["f001_step"] = WAIT_NAME
-    context.user_data["f001_data"] = {}
-    await update.callback_query.edit_message_text(
-        "👤 *إضافة عميل جديد*\n\n"
-        "الخطوة 1 من 3\n"
-        "اكتب اسم العميل كاملاً:",
-        parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")]
-        ])
-    )
+    query = update.callback_query
+    if query:
+        await query.answer()
+        context.user_data.clear()
+        context.user_data["f001_step"] = "name"
+        context.user_data["f001_data"] = {}
+        await query.edit_message_text(
+            "➕ *إضافة عميل جديد*\n\n" + PROMPTS["name"],
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")
+            ]])
+        )
 
-async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
-    """تُستدعى من main.py لكل رسالة نصية — ترجع True لو هي شغلتها"""
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     step = context.user_data.get("f001_step")
-    if step is None:
-        return False
-
-    text = update.message.text.strip()
     data = context.user_data.setdefault("f001_data", {})
+    text = update.message.text.strip()
+    chat_id = update.effective_chat.id
 
-    # ── خطوة 1: الاسم ──────────────────────────────────────────────
-    if step == WAIT_NAME:
+    cancel_btn = InlineKeyboardMarkup([[
+        InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")
+    ]])
+
+    if step == "name":
         if len(text) < 3:
-            await update.message.reply_text("❌ الاسم قصير جداً، اكتب الاسم كاملاً:")
-            return True
+            await update.message.reply_text("❌ الاسم قصير جداً. أدخل الاسم كاملاً:", reply_markup=cancel_btn)
+            return
         data["name"] = text
-        context.user_data["f001_step"] = WAIT_ID
-        await update.message.reply_text(
-            "✅ تم حفظ الاسم.\n\n"
-            "الخطوة 2 من 3\n"
-            "اكتب الرقم القومي (14 رقم):",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")]
-            ])
-        )
-        return True
+        context.user_data["f001_step"] = "national_id"
+        await update.message.reply_text(PROMPTS["national_id"], parse_mode="Markdown", reply_markup=cancel_btn)
 
-    # ── خطوة 2: الرقم القومي ───────────────────────────────────────
-    if step == WAIT_ID:
-        if not re.fullmatch(r"\d{14}", text):
-            await update.message.reply_text("❌ الرقم القومي يجب أن يكون 14 رقم بالظبط، حاول تاني:")
-            return True
+    elif step == "national_id":
+        if not re.match(r'^\d{14}$', text):
+            await update.message.reply_text("❌ الرقم القومي يجب أن يكون 14 رقماً:", reply_markup=cancel_btn)
+            return
         data["national_id"] = text
-        context.user_data["f001_step"] = WAIT_PHONE
-        await update.message.reply_text(
-            "✅ تم حفظ الرقم القومي.\n\n"
-            "الخطوة 3 من 3\n"
-            "اكتب رقم الموبايل:",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")]
-            ])
-        )
-        return True
+        context.user_data["f001_step"] = "mobile"
+        await update.message.reply_text(PROMPTS["mobile"], parse_mode="Markdown", reply_markup=cancel_btn)
 
-    # ── خطوة 3: الموبايل ───────────────────────────────────────────
-    if step == WAIT_PHONE:
-        if not re.fullmatch(r"01[0125]\d{8}", text):
-            await update.message.reply_text("❌ رقم الموبايل غير صحيح، اكتب رقم مصري صحيح:")
-            return True
-        data["phone"] = text
-        context.user_data["f001_step"] = None
+    elif step == "mobile":
+        if not re.match(r'^01[0-9]{9}$', text):
+            await update.message.reply_text("❌ رقم الموبايل غير صحيح. أدخل رقماً بصيغة 01XXXXXXXXX:", reply_markup=cancel_btn)
+            return
+        data["mobile"] = text
+        context.user_data["f001_step"] = "address"
+        await update.message.reply_text(PROMPTS["address"], parse_mode="Markdown", reply_markup=cancel_btn)
 
-        # ── حفظ في الشيت ───────────────────────────────────────────
+    elif step == "address":
+        if len(text) < 3:
+            await update.message.reply_text("❌ العنوان قصير جداً:", reply_markup=cancel_btn)
+            return
+        data["address"] = text
+
         try:
-            ws   = get_sheet()
-            code = next_client_code(ws)
-            date = datetime.now().strftime("%Y-%m-%d %H:%M")
-            ws.append_row([code, data["name"], data["national_id"], data["phone"], date])
-
-            await update.message.reply_text(
-                f"✅ *تمت إضافة العميل بنجاح!*\n\n"
-                f"🔑 الكود: `{code}`\n"
-                f"👤 الاسم: {data['name']}\n"
-                f"🪪 الرقم القومي: {data['national_id']}\n"
-                f"📱 الموبايل: {data['phone']}\n"
-                f"📅 التاريخ: {date}",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("➕ إضافة عميل آخر", callback_data="F001")],
-                    [InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]
-                ])
-            )
-        except Exception as e:
-            await update.message.reply_text(
-                f"❌ *حدث خطأ أثناء الحفظ:*\n`{type(e).__name__}: {e}`",
-                parse_mode="Markdown",
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]
-                ])
-            )
-        return True
-
-    return False
+            ws  = get_sheet()
+            code = generate_client_
