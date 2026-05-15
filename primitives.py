@@ -2,6 +2,8 @@ import os
 import re
 import json
 import gspread
+import hashlib
+import time
 from datetime import datetime
 from google.oauth2.service_account import Credentials
 
@@ -166,6 +168,7 @@ async def N003(context, assistant_chat_id, text):
     except Exception as e:
         print(f"❌ N003: {e}")
         return False
+
 def C001(title, date, location=""):
     try:
         if not V001(title) or not V004(date): return None
@@ -195,19 +198,18 @@ def C003():
         today = datetime.now().date()
         upcoming = []
         for r in records:
+            date_val = r.get("event_date", "") or r.get("date", "")
             for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
                 try:
-                    d = datetime.strptime(str(r.get("date", "")), fmt).date()
+                    d = datetime.strptime(str(date_val).strip(), fmt).date()
                     if d >= today:
                         upcoming.append(r)
                     break
                 except: continue
-        return sorted(upcoming, key=lambda x: x.get("date", ""))
+        return sorted(upcoming, key=lambda x: x.get("event_date", x.get("date", "")))
     except Exception as e:
         print(f"❌ C003: {e}")
         return []
-
-import hashlib, time
 
 def L001(user_type, ref_code):
     try:
