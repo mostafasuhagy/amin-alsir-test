@@ -62,9 +62,9 @@ async def RE003(update, context):
     await T001(context, update.effective_chat.id, text)
 
 async def RD001(update, context):
-    await T001(context, update.effective_chat.id, "📁 *رفع مستند وارد*\n\nأرسل الملف:")
+    await T001(context, update.effective_chat.id, "📁 *رفع مستند وارد*\n\nأدخل كود الموضوع المرتبط:")
     context.user_data["routine"] = "RD001"
-    context.user_data["step"] = "file"
+    context.user_data["step"] = "topic_code"
 
 async def RD002(update, context):
     await T001(context, update.effective_chat.id, "📤 *طلب مستندات*\n\nأدخل اسم الجهة:")
