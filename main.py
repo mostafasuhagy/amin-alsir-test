@@ -4,32 +4,17 @@ from telegram.ext import (
     ContextTypes, MessageHandler, filters
 )
 import importlib, os, sys
+from routines import *
 
 TOKEN = "8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk"
 
-# ─── مكتبة الأكواد المرجعية ───────────────────────────────────────────────────
+# ─── خريطة الأكواد ────────────────────────────────────────────────────────────
 
-LIBRARY = {}
-
-def load_library():
-    lib_path = os.path.join(os.path.dirname(__file__), "library")
-    if not os.path.exists(lib_path):
-        os.makedirs(lib_path)
-        return
-    sys.path.insert(0, lib_path)
-    for filename in sorted(os.listdir(lib_path)):
-        if filename.endswith(".py") and filename[0] != "_":
-            module_name = filename[:-3]
-            parts = module_name.split("_", 1)
-            if parts and len(parts[0]) == 4:
-                ref = parts[0][:1] + "-" + parts[0][1:]
-                try:
-                    mod = importlib.import_module(module_name)
-                    if hasattr(mod, "handler"):
-                        LIBRARY[ref] = mod.handler
-                        print(f"✅ تم تحميل الكود: {ref}")
-                except Exception as e:
-                    print(f"❌ خطأ في تحميل {module_name}: {e}")
+ROUTE_MAP = {
+    "F-001": F001,  "F-002": RA001, "F-003": RT001, "F-004": RT001,
+    "F-005": RE001, "F-006": RE002, "F-007": RS001, "F-008": RD002,
+    "F-009": RM001, "F-010": RE003,
+}
 
 # ─── لوحة القيادة ─────────────────────────────────────────────────────────────
 
@@ -59,7 +44,7 @@ def settings_keyboard():
 
 def events_keyboard():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📅 عرض التقويم",     callback_data="F-010")],
+        [InlineKeyboardButton("📅 عرض الأحداث",     callback_data="F-010")],
         [InlineKeyboardButton("➕ إضافة حدث جديد", callback_data="F-005")],
         [InlineKeyboardButton("🔙 رجوع",             callback_data="MENU-MAIN")],
     ])
@@ -94,61 +79,31 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data = query.data
 
     if data == "MENU-MAIN":
-        await query.edit_message_text(
-            "لوحة القيادة:",
-            reply_markup=main_keyboard()
-        )
+        await query.edit_message_text("لوحة القيادة:", reply_markup=main_keyboard())
     elif data == "MENU-SETTINGS":
-        await query.edit_message_text(
-            "⚙️ *الإعدادات*\nاختر العملية:",
-            parse_mode="Markdown",
-            reply_markup=settings_keyboard()
-        )
+        await query.edit_message_text("⚙️ *الإعدادات*\nاختر العملية:", parse_mode="Markdown", reply_markup=settings_keyboard())
     elif data == "MENU-EVENTS":
-        await query.edit_message_text(
-            "📅 *الأحداث*\nاختر العملية:",
-            parse_mode="Markdown",
-            reply_markup=events_keyboard()
-        )
+        await query.edit_message_text("📅 *الأحداث*\nاختر العملية:", parse_mode="Markdown", reply_markup=events_keyboard())
     elif data == "MENU-SERVICES":
-        await query.edit_message_text(
-            "📋 *الخدمات*\nاختر الخدمة:",
-            parse_mode="Markdown",
-            reply_markup=services_keyboard()
-        )
+        await query.edit_message_text("📋 *الخدمات*\nاختر الخدمة:", parse_mode="Markdown", reply_markup=services_keyboard())
     elif data == "MENU-REPORTS":
-        await query.edit_message_text(
-            "📊 التقارير — قريباً! 🚧",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]
-            ])
-        )
+        await query.edit_message_text("📊 التقارير — قريباً! 🚧", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]]))
     elif data == "MENU-INBOX":
-        await query.edit_message_text(
-            "💬 بريد الإشعارات — قريباً! 🚧",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]
-            ])
-        )
-    elif data in LIBRARY:
-        await LIBRARY[data](update, context)
+        await query.edit_message_text("💬 بريد الإشعارات — قريباً! 🚧", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]]))
+    elif data in ROUTE_MAP:
+        await ROUTE_MAP[data](update, context)
     else:
         await query.edit_message_text(
             f"⏳ الكود *{data}* قيد التطوير.",
             parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]
-            ])
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]])
         )
 
 # ─── تشغيل البوت ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    load_library()
-    print(f"📚 الأكواد المحملة: {list(LIBRARY.keys())}")
-
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
-    app.run_polling()
+    app.run_polling(drop_pending_updates=True)
