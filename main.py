@@ -10,15 +10,11 @@ from datetime import datetime
 
 TOKEN = "8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk"
 
-# ─── خريطة الأكواد ────────────────────────────────────────────────────────────
-
 ROUTE_MAP = {
     "F-001": F001,  "F-002": RA001, "F-003": RT001, "F-004": RT001,
     "F-005": RE001, "F-006": RE002, "F-007": RS001, "F-008": RD002,
     "F-009": RM001, "F-010": RE003,
 }
-
-# ─── لوحة القيادة ─────────────────────────────────────────────────────────────
 
 def main_keyboard():
     return InlineKeyboardMarkup([
@@ -59,8 +55,6 @@ def services_keyboard():
         [InlineKeyboardButton("💰 طلب عهدة مالية", callback_data="F-009")],
         [InlineKeyboardButton("🔙 رجوع",             callback_data="MENU-MAIN")],
     ])
-
-# ─── Handlers ─────────────────────────────────────────────────────────────────
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -146,7 +140,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ كود العميل غير موجود:")
                 return
             data["client_code"] = text
-            data["client_name"] = client.get("الاسم", "")
+            data["client_name"] = client.get("client_name", "")
             context.user_data["step"] = "title"
             await T002(context, chat_id, f"✅ العميل: {data['client_name']}\n\nأدخل *عنوان الموضوع*:", cancel_btn)
         elif step == "title":
@@ -154,8 +148,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ العنوان قصير:")
                 return
             data["title"] = text
+            context.user_data["step"] = "event_type"
+            await T002(context, chat_id, "📋 أدخل *نوع الموضوع* (مثال: طلاق / ميراث / عقار):", cancel_btn)
+        elif step == "event_type":
+            data["event_type"] = text
             code = G001("Tp", "Topics")
-            ok = P003("Topics", [code, data["client_code"], data["title"], "جديد", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            ok = P003("Topics", [code, data["client_code"], data["client_name"], data["title"], data["event_type"], "جديد", datetime.now().strftime("%Y-%m-%d %H:%M")])
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
@@ -169,18 +167,38 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ العنوان قصير:")
                 return
             data["title"] = text
-            context.user_data["step"] = "date"
+            context.user_data["step"] = "topic_code"
+            await T002(context, chat_id, "📋 أدخل *كود الموضوع* (مثال: Tp-001):", cancel_btn)
+        elif step == "topic_code":
+            data["topic_code"] = text
+            context.user_data["step"] = "client_name"
+            await T002(context, chat_id, "👤 أدخل *اسم العميل*:", cancel_btn)
+        elif step == "client_name":
+            data["client_name"] = text
+            context.user_data["step"] = "event_type"
+            await T002(context, chat_id, "⚖️ أدخل *نوع الحدث* (مثال: جلسة / موعد / تسليم):", cancel_btn)
+        elif step == "event_type":
+            data["event_type"] = text
+            context.user_data["step"] = "event_date"
             await T002(context, chat_id, "📅 أدخل *تاريخ الحدث* (DD/MM/YYYY):", cancel_btn)
-        elif step == "date":
+        elif step == "event_date":
             if not V004(text):
                 await T001(context, chat_id, "❌ التاريخ غير صحيح. استخدم DD/MM/YYYY:")
                 return
-            data["date"] = text
+            data["event_date"] = text
+            context.user_data["step"] = "event_time"
+            await T002(context, chat_id, "⏰ أدخل *وقت الحدث* (مثال: 10:00 ص):", cancel_btn)
+        elif step == "event_time":
+            data["event_time"] = text
+            context.user_data["step"] = "location"
+            await T002(context, chat_id, "📍 أدخل *مكان الحدث* (المحكمة/الجهة):", cancel_btn)
+        elif step == "location":
+            data["location"] = text
             code = G001("Ev", "Events")
-            ok = P003("Events", [code, data["title"], data["date"], "قادم", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            ok = P003("Events", [code, data["event_date"], data["topic_code"], data["client_name"], data["event_type"], data["event_time"], data["location"]])
             context.user_data.clear()
             if ok:
-                await T002(context, chat_id, f"✅ *تم إضافة الحدث!*\n\n🔹 الكود: `{code}`\n📅 {data['title']} — {data['date']}", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
+                await T002(context, chat_id, f"✅ *تم إضافة الحدث!*\n\n🔹 الكود: `{code}`\n📅 {data['event_date']} — {data['event_type']}\n📍 {data['location']}", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -198,15 +216,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ السبب قصير:")
                 return
             data["reason"] = text
-            code = G001("Fn", "Finance")
-            ok = P003("Finance", [code, data["amount"], data["reason"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            code = G001("Fn", "Custody")
+            ok = P003("Custody", [code, data["amount"], data["reason"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")])
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم طلب العهدة!*\n\n🔹 الكود: `{code}`\n💰 {data['amount']} جنيه", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
-
-# ─── menu_router ──────────────────────────────────────────────────────────────
 
 async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
@@ -233,8 +249,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]])
         )
-
-# ─── تشغيل البوت ──────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
