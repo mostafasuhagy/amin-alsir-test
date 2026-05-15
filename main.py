@@ -4,6 +4,7 @@ from telegram.ext import (
     ContextTypes, MessageHandler, filters
 )
 import importlib, os, sys
+from routines import *
 
 TOKEN = "8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk"
 
