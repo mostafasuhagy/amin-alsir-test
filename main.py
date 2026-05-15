@@ -202,6 +202,77 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
+    # ─── RE002 نتيجة حدث ───
+    elif routine == "RE002":
+        if step == "event_code":
+            event = P002("Events", text)
+            if not event:
+                await T001(context, chat_id, "❌ كود الحدث غير موجود:")
+                return
+            data["event_code"] = text
+            data["event_type"] = event.get("event_type", "")
+            data["event_date"] = event.get("event_date", "")
+            context.user_data["step"] = "result"
+            await T002(context, chat_id, f"📅 الحدث: {data['event_type']} — {data['event_date']}\n\n📝 أدخل *نتيجة الحدث*:", cancel_btn)
+        elif step == "result":
+            if not V001(text):
+                await T001(context, chat_id, "❌ النتيجة قصيرة:")
+                return
+            data["result"] = text
+            records = P005("Events")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(data["event_code"]):
+                    P004("Events", i, 8, text)
+                    P004("Events", i, 9, "منتهي")
+                    break
+            context.user_data.clear()
+            await T002(context, chat_id, f"✅ *تم تسجيل النتيجة!*\n\n📝 {data['result']}", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
+
+    # ─── RS001 تداول مرفقات ───
+    elif routine == "RS001":
+        if step == "topic_code":
+            topic = P002("Topics", text)
+            if not topic:
+                await T001(context, chat_id, "❌ كود الموضوع غير موجود:")
+                return
+            data["topic_code"] = text
+            context.user_data["step"] = "description"
+            await T002(context, chat_id, "📦 أدخل *وصف المرفقات*:", cancel_btn)
+        elif step == "description":
+            if not V001(text):
+                await T001(context, chat_id, "❌ الوصف قصير:")
+                return
+            data["description"] = text
+            code = G001("Sh", "Shipments")
+            ok = P003("Shipments", [code, data["topic_code"], data["description"], "صادر", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            context.user_data.clear()
+            if ok:
+                await T002(context, chat_id, f"✅ *تم تسجيل الشحنة!*\n\n🔹 الكود: `{code}`\n📦 {data['description']}", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
+            else:
+                await T001(context, chat_id, "❌ حدث خطأ.")
+
+    # ─── RD002 طلب مستندات ───
+    elif routine == "RD002":
+        if step == "entity":
+            if not V001(text):
+                await T001(context, chat_id, "❌ اسم الجهة قصير:")
+                return
+            data["entity"] = text
+            context.user_data["step"] = "description"
+            await T002(context, chat_id, "📄 أدخل *وصف المستندات المطلوبة*:", cancel_btn)
+        elif step == "description":
+            if not V001(text):
+                await T001(context, chat_id, "❌ الوصف قصير:")
+                return
+            data["description"] = text
+            code = G001("Doc", "Documents")
+            ok = P003("Documents", [code, data["entity"], data["description"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            context.user_data.clear()
+            if ok:
+                await T002(context, chat_id, f"✅ *تم تسجيل الطلب!*\n\n🔹 الكود: `{code}`\n📄 من: {data['entity']}", [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]])
+            else:
+                await T001(context, chat_id, "❌ حدث خطأ.")
+
     # ─── RM001 طلب عهدة مالية ───
     elif routine == "RM001":
         if step == "amount":
