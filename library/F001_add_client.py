@@ -57,7 +57,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     step = context.user_data.get("f001_step")
     data = context.user_data.setdefault("f001_data", {})
     text = update.message.text.strip()
-    chat_id = update.effective_chat.id
 
     cancel_btn = InlineKeyboardMarkup([[
         InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")
@@ -94,5 +93,26 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data["address"] = text
 
         try:
-            ws  = get_sheet()
-            code = generate_client_
+            ws = get_sheet()
+            code = generate_client_code(ws)
+            ws.append_row([
+                code,
+                data["name"],
+                data["national_id"],
+                data["mobile"],
+                data["address"],
+                datetime.now().strftime("%Y-%m-%d %H:%M")
+            ])
+            context.user_data.clear()
+            await update.message.reply_text(
+                f"✅ *تم إضافة العميل بنجاح!*\n\n"
+                f"🔹 الكود: `{code}`\n"
+                f"👤 الاسم: {data['name']}\n"
+                f"📱 الموبايل: {data['mobile']}",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="MENU-MAIN")
+                ]])
+            )
+        except Exception as e:
+            await update.message.reply_text(f"❌ خطأ: {e}")
