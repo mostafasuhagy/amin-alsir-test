@@ -385,11 +385,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 code   = list(t.values())[0]
                 title  = t.get("service_name", "—")   # E: عنوان الموضوع
                 status = t.get("status", "—")           # I: الحالة
-                notes  = t.get("notes", "")             # J: نوع الموضوع
-                msg += f"🔹 `{code}` — {title} — [{status}]"
-                if notes:
-                    msg += f" — {notes}"
-                msg += "\n"
+                msg += f"🔹 `{code}` — {title} — [{status}]\n"
             await T002(context, chat_id, msg, back_btn)
 
     # ═══════════════════════════════════════════
