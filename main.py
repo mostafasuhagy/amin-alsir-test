@@ -194,7 +194,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             data["address"] = text
             code = G001("Cl", "Clients")
-            ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M"), ""])
+            ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M")])
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم إضافة العميل!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n📱 {data['mobile']}", back_btn)
