@@ -238,7 +238,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
             data["client_code"] = text
-            data["client_row"]  = None
+            data["client_row"]  = None  # سيُحدَّد عند الحفظ
             context.user_data["step"] = "field"
             await T002(context, chat_id,
                 f"✅ العميل: *{client.get('client_name','')}*\n\nأي حقل تريد تعديله؟\nأدخل رقم الحقل:\n1️⃣ الاسم\n2️⃣ رقم الموبايل\n3️⃣ العنوان",
@@ -253,14 +253,17 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✏️ أدخل *{field_names[text]}* الجديد:", cancel_btn)
         elif step == "new_value":
             field = data.get("field")
+            # أعمدة شيت Clients: client_code(1) client_name(2) national_id(3) mobile(4) address(5) date_added(6)
             col_map = {"1": (2, "client_name"), "2": (4, "mobile"), "3": (5, "address")}
             col_num, col_key = col_map[field]
+            # التحقق
             if field == "2" and not V003(text):
                 await T001(context, chat_id, "❌ رقم الموبايل غير صحيح:")
                 return
             if field in ("1", "3") and not V001(text):
                 await T001(context, chat_id, "❌ القيمة قصيرة جداً:")
                 return
+            # إيجاد رقم الصف
             records = P005("Clients")
             row_num = None
             for i, r in enumerate(records, start=2):
@@ -326,7 +329,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RT001 — إضافة موضوع جديد
-    # أعمدة Topics: topic_code | client_code | client_name | service_code | service_name | assistant_code | assistant_name | date_opened | status | notes
     # ═══════════════════════════════════════════
     elif routine == "RT001":
         if step == "client_code":
@@ -343,26 +345,15 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ العنوان قصير:")
                 return
             data["title"] = text
-            context.user_data["step"] = "topic_type"
+            context.user_data["step"] = "event_type"
             await T002(context, chat_id, "📋 أدخل *نوع الموضوع* (مثال: طلاق / ميراث / عقار):", cancel_btn)
-        elif step == "topic_type":
-            data["topic_type"] = text
+        elif step == "event_type":
+            data["event_type"] = text
             code = G001("Tp", "Topics")
-            ok = P003("Topics", [
-                code,                # A: topic_code
-                data["client_code"], # B: client_code
-                data["client_name"], # C: client_name
-                "",                  # D: service_code (فاضي)
-                data["title"],       # E: service_name (عنوان الموضوع)
-                "",                  # F: assistant_code (فاضي)
-                "",                  # G: assistant_name (فاضي)
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # H: date_opened
-                "جديد",              # I: status
-                data["topic_type"]   # J: notes (نوع الموضوع)
-            ])
+            ok = P003("Topics", [code, data["client_code"], data["client_name"], data["title"], data["event_type"], "جديد", datetime.now().strftime("%Y-%m-%d %H:%M")])
             context.user_data.clear()
             if ok:
-                await T002(context, chat_id, f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}\n📌 النوع: {data['topic_type']}", back_btn)
+                await T002(context, chat_id, f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}", back_btn)
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -383,8 +374,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg = f"📋 *موضوعات العميل: {client.get('client_name','')}*\n\n"
             for t in topics:
                 code   = list(t.values())[0]
-                title  = t.get("service_name", "—")   # E: عنوان الموضوع
-                status = t.get("status", "—")           # I: الحالة
+                title  = t.get("title", t.get("topic_title", "—"))
+                status = t.get("status", t.get("topic_status", "—"))
                 msg += f"🔹 `{code}` — {title} — [{status}]\n"
             await T002(context, chat_id, msg, back_btn)
 
@@ -398,8 +389,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T002(context, chat_id, "❌ كود الموضوع غير موجود.", back_btn)
                 context.user_data.clear()
                 return
-            data["topic_code"]  = text
-            data["topic_title"] = topic.get("service_name", "—")  # E: عنوان الموضوع
+            data["topic_code"] = text
+            data["topic_title"] = topic.get("title", topic.get("topic_title", ""))
             context.user_data["step"] = "new_status"
             await T002(context, chat_id,
                 f"📋 الموضوع: *{data['topic_title']}*\n\nأدخل الحالة الجديدة:\n• جديد\n• قيد النظر\n• منتهي\n• موقوف",
@@ -418,7 +409,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ لم يُعثر على الموضوع.")
                 context.user_data.clear()
                 return
-            ok = P004("Topics", row_num, 9, text)  # عمود I (status) = رقم 9
+            # عمود الحالة هو العمود السادس (status)
+            ok = P004("Topics", row_num, 6, text)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم تغيير الحالة!*\n\n📋 {data['topic_title']}\n🔄 الحالة الجديدة: {text}", back_btn)
@@ -436,7 +428,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
             data["topic_code"]  = text
-            data["topic_title"] = topic.get("service_name", "—")  # E: عنوان الموضوع
+            data["topic_title"] = topic.get("title", topic.get("topic_title", ""))
             context.user_data["step"] = "confirm"
             await T002(context, chat_id,
                 f"🗄️ هل تريد أرشفة الموضوع: *{data['topic_title']}*؟\n\nاكتب *نعم* للتأكيد أو *لا* للإلغاء:",
@@ -456,7 +448,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ لم يُعثر على الموضوع.")
                 context.user_data.clear()
                 return
-            ok = P004("Topics", row_num, 9, "مؤرشف")  # عمود I (status) = رقم 9
+            ok = P004("Topics", row_num, 6, "مؤرشف")
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم أرشفة الموضوع!*\n\n🗄️ {data['topic_title']}", back_btn)
@@ -546,7 +538,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
             data["topic_code"]  = text
-            data["topic_title"] = topic.get("service_name", "—")  # E: عنوان الموضوع
+            data["topic_title"] = topic.get("title", topic.get("topic_title", ""))
             context.user_data["step"] = "doc_name"
             await T002(context, chat_id, f"✅ الموضوع: *{data['topic_title']}*\n\nأدخل *اسم المستند*:", cancel_btn)
         elif step == "doc_name":
@@ -635,7 +627,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["doc_code"]):
                     P004("Documents", i, 6, "مرفوض")
-                    P004("Documents", i, 8, text)
+                    P004("Documents", i, 8, text)  # عمود ملاحظات/سبب إن وجد
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n📄 {data['doc_name']}\n❌ السبب: {text}", back_btn)
@@ -654,7 +646,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not docs:
                 await T002(context, chat_id, f"📂 لا توجد مستندات للموضوع `{text}`.", back_btn)
                 return
-            title = topic.get("service_name", text)  # E: عنوان الموضوع
+            title = topic.get("title", topic.get("topic_title", text))
             msg = f"📂 *مستندات الموضوع: {title}*\n\n"
             for d in docs:
                 code   = list(d.values())[0]
@@ -674,7 +666,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
             data["topic_code"]  = text
-            data["topic_title"] = topic.get("service_name", "—")  # E: عنوان الموضوع
+            data["topic_title"] = topic.get("title", topic.get("topic_title", ""))
             context.user_data["step"] = "confirm"
             await T002(context, chat_id,
                 f"🗄️ هل تريد أرشفة *كل مستندات* الموضوع: *{data['topic_title']}*؟\n\nاكتب *نعم* للتأكيد:",
@@ -694,7 +686,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✅ *تم أرشفة {count} مستند!*\n\n🗄️ الموضوع: {data['topic_title']}", back_btn)
 
     # ═══════════════════════════════════════════
-    # RS001 — إرسال مرفقات (شحنة صادرة)
+    # RS001 — تداول مرفقات (شحنة صادرة)
     # ═══════════════════════════════════════════
     elif routine == "RS001":
         if step == "topic_code":
@@ -870,6 +862,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ الرسالة قصيرة:")
                 return
+            # تسجيل الإشعار في شيت
             ok = P003("Notifications", [
                 G001("Nt", "Notifications"),
                 "عميل",
