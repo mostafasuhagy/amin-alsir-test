@@ -930,7 +930,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RM001 — طلب عهدة مالية
-    # أعمدة Custody: custody_code(1) | amount(2) | reason(3) | status(4) | date_requested(5) | spent(6) | notes(7)
+    # أعمدة Custody: custody_code(1) | responsible_code(2) | amount(3) | payment_due(4) | payment_status(5) | actual_payment_date(6) | notes(7)
     # ═══════════════════════════════════════════
     elif routine == "RM001":
         if step == "amount":
@@ -948,13 +948,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["reason"] = text
             code = G001("Fn", "Custody")
             ok = P003("Custody", [
-                code,
-                data["amount"],
-                data["reason"],
-                "طلب",
-                datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "",
-                ""
+                code,           # A: custody_code
+                "",             # B: responsible_code
+                data["amount"], # C: amount
+                data["reason"], # D: payment_due (السبب)
+                "طلب",          # E: payment_status
+                "",             # F: actual_payment_date
+                ""              # G: notes
             ])
             context.user_data.clear()
             if ok:
@@ -966,7 +966,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RM002 — تسوية عهدة مالية
-    # أعمدة Custody: custody_code(1) | amount(2) | reason(3) | status(4) | date_requested(5) | spent(6) | notes(7)
+    # أعمدة Custody: custody_code(1) | responsible_code(2) | amount(3) | payment_due(4) | payment_status(5) | actual_payment_date(6) | notes(7)
     # ═══════════════════════════════════════════
     elif routine == "RM002":
         if step == "fund_code":
@@ -977,7 +977,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             data["fund_code"] = text
             data["amount"]    = fund.get("amount", "—")
-            data["reason"]    = fund.get("reason", "—")
+            data["reason"]    = fund.get("payment_due", "—")
             context.user_data["step"] = "spent"
             await T002(context, chat_id,
                 f"💰 *بيانات العهدة*\n\n🔹 الكود: `{text}`\n💵 المبلغ الكلي: {data['amount']} جنيه\n📝 السبب: {data['reason']}\n\n💳 أدخل *المبلغ المصروف فعلياً*:",
@@ -1003,9 +1003,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ لم يُعثر على العهدة.")
                 context.user_data.clear()
                 return
-            P004("Custody", row_num, 4, "مسوّاة")     # status = عمود 4
-            P004("Custody", row_num, 6, data["spent"]) # spent = عمود 6
-            P004("Custody", row_num, 7, data["notes"]) # notes = عمود 7
+            P004("Custody", row_num, 5, "مسوّاة")                              # E: payment_status = عمود 5
+            P004("Custody", row_num, 6, datetime.now().strftime("%Y-%m-%d %H:%M"))  # F: actual_payment_date = عمود 6
+            P004("Custody", row_num, 7, data["notes"])                          # G: notes = عمود 7
             context.user_data.clear()
             await T002(context, chat_id,
                 f"✅ *تمت التسوية!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 المبلغ الكلي: {data['amount']} جنيه\n💳 المصروف: {data['spent']} جنيه\n📝 الملاحظات: {data['notes']}",
