@@ -1026,7 +1026,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     back_btn)
             else:
                 await T002(context, chat_id,
-                    f"⚠️ *تم تسجيل الإشعار:*\n\n🔔 {text}\n\n_(لم يُرسَل — BOSS\_CHAT\_ID غير مضبوط)_",
+                    f"⚠️ *تم تسجيل الإشعار:*\n\n🔔 {text}\n\nلم يُرسَل — BOSS CHAT ID غير مضبوط",
                     back_btn)
             context.user_data.clear()
 
