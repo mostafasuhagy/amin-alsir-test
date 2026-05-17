@@ -292,7 +292,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RA001 — إضافة مساعد جديد
-    # أعمدة Assistants: assistant_code | assistant_name | mobile | date_added
+    # أعمدة Assistants: assistant_code(A) | assistant_name(B) | bar_number(C) | mobile(D) | date_added(E) | notes(F) | attachments_code(G)
     # ═══════════════════════════════════════════
     elif routine == "RA001":
         if step == "name":
@@ -300,6 +300,11 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ الاسم قصير:")
                 return
             data["name"] = text
+            context.user_data["step"] = "bar_number"
+            await T002(context, chat_id, "🪪 أدخل *رقم النقابة* (أو اكتب — للتخطي):", cancel_btn)
+
+        elif step == "bar_number":
+            data["bar_number"] = text
             context.user_data["step"] = "mobile"
             await T002(context, chat_id, "📱 أدخل *رقم الموبايل*:", cancel_btn)
 
@@ -310,10 +315,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["mobile"] = text
             code = G001("As", "Assistants")
             ok = P003("Assistants", [
-                code,
-                data["name"],
-                data["mobile"],
-                datetime.now().strftime("%Y-%m-%d %H:%M")
+                code,                                        # A: assistant_code
+                data["name"],                                # B: assistant_name
+                data["bar_number"],                          # C: bar_number
+                data["mobile"],                              # D: mobile
+                datetime.now().strftime("%Y-%m-%d %H:%M"),  # E: date_added
+                "",                                          # F: notes
+                ""                                           # G: attachments_code
             ])
             context.user_data.clear()
             if ok:
@@ -337,6 +345,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👤 *بيانات المساعد*\n\n"
                 f"🔹 الكود: `{text}`\n"
                 f"📛 الاسم: {asst.get('assistant_name', '—')}\n"
+                f"🪪 رقم النقابة: {asst.get('bar_number', '—')}\n"
                 f"📱 الموبايل: {asst.get('mobile', '—')}\n"
                 f"📅 تاريخ الإضافة: {asst.get('date_added', '—')}"
             )
