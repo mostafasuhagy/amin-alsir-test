@@ -9,6 +9,7 @@ from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
 CALENDAR_ID = "mostafa.suhagy@gmail.com"  # Google Calendar ID
+DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"  # ✅ مجلد amin_alsir_docs
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -43,6 +44,21 @@ def P001C():
         return service
     except Exception as e:
         print(f"❌ P001C: {e}")
+        return None
+
+# ─────────────────────────────────────────────
+# P001D — الاتصال بـ Google Drive
+# ─────────────────────────────────────────────
+def P001D():
+    try:
+        from googleapiclient.discovery import build
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+        creds_dict = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        service = build("drive", "v3", credentials=creds)
+        return service
+    except Exception as e:
+        print(f"❌ P001D: {e}")
         return None
 
 # ─────────────────────────────────────────────
@@ -268,6 +284,214 @@ def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
     except Exception as e:
         print(f"❌ CAL005: {e}")
         return False
+
+# ─────────────────────────────────────────────
+# Google Drive Functions
+# ─────────────────────────────────────────────
+
+def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
+    """
+    رفع ملف إلى Google Drive داخل مجلد الموضوع
+    file_path  : المسار المحلي للملف (مؤقت)
+    file_name  : اسم الملف كما سيُحفظ في Drive
+    topic_code : كود الموضوع (يُستخدم لإنشاء مجلد فرعي)
+    يُرجع: drive_link أو None
+    """
+    try:
+        from googleapiclient.http import MediaFileUpload
+        import mimetypes
+
+        service = P001D()
+        if not service:
+            return None
+
+        # إنشاء أو الحصول على مجلد الموضوع داخل amin_alsir_docs
+        sub_folder_id = DRV004(topic_code, folder_id)
+        if not sub_folder_id:
+            return None
+
+        # تحديد نوع الملف
+        mime_type, _ = mimetypes.guess_type(file_name)
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        # رفع الملف
+        file_metadata = {
+            "name":    file_name,
+            "parents": [sub_folder_id],
+        }
+        media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+        uploaded = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, webViewLink"
+        ).execute()
+
+        file_id   = uploaded.get("id")
+        drive_link = uploaded.get("webViewLink", f"https://drive.google.com/file/d/{file_id}/view")
+
+        # منح صلاحية عرض للجميع (anyone with link)
+        service.permissions().create(
+            fileId=file_id,
+            body={"type": "anyone", "role": "reader"}
+        ).execute()
+
+        print(f"✅ DRV001: تم رفع الملف — {file_name} → {drive_link}")
+        return drive_link
+
+    except Exception as e:
+        print(f"❌ DRV001: {e}")
+        return None
+
+
+def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
+    """
+    عرض ملفات موضوع معين من Google Drive
+    يُرجع: قائمة بالملفات [{name, link, created_time}]
+    """
+    try:
+        service = P001D()
+        if not service:
+            return []
+
+        # البحث عن مجلد الموضوع
+        query = (
+            f"name='{topic_code}' and "
+            f"'{folder_id}' in parents and "
+            f"mimeType='application/vnd.google-apps.folder' and "
+            f"trashed=false"
+        )
+        res = service.files().list(q=query, fields="files(id, name)").execute()
+        folders = res.get("files", [])
+        if not folders:
+            return []
+
+        sub_folder_id = folders[0]["id"]
+
+        # جلب الملفات داخل المجلد
+        query2 = f"'{sub_folder_id}' in parents and trashed=false"
+        res2 = service.files().list(
+            q=query2,
+            fields="files(id, name, webViewLink, createdTime)",
+            orderBy="createdTime desc"
+        ).execute()
+
+        files = []
+        for f in res2.get("files", []):
+            files.append({
+                "name":         f.get("name", "—"),
+                "link":         f.get("webViewLink", f"https://drive.google.com/file/d/{f['id']}/view"),
+                "created_time": f.get("createdTime", "")[:10],
+            })
+
+        print(f"✅ DRV002: تم جلب {len(files)} ملف للموضوع {topic_code}")
+        return files
+
+    except Exception as e:
+        print(f"❌ DRV002: {e}")
+        return []
+
+
+def DRV003(file_id):
+    """
+    حذف ملف من Google Drive
+    يُرجع: True / False
+    """
+    try:
+        service = P001D()
+        if not service:
+            return False
+        service.files().delete(fileId=file_id).execute()
+        print(f"✅ DRV003: تم حذف الملف — {file_id}")
+        return True
+    except Exception as e:
+        print(f"❌ DRV003: {e}")
+        return False
+
+
+def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
+    """
+    إنشاء مجلد فرعي في Drive إذا لم يكن موجوداً، أو إرجاع ID المجلد الموجود
+    يُرجع: folder_id أو None
+    """
+    try:
+        service = P001D()
+        if not service:
+            return None
+
+        # البحث عن مجلد بنفس الاسم
+        query = (
+            f"name='{folder_name}' and "
+            f"'{parent_id}' in parents and "
+            f"mimeType='application/vnd.google-apps.folder' and "
+            f"trashed=false"
+        )
+        res = service.files().list(q=query, fields="files(id, name)").execute()
+        existing = res.get("files", [])
+        if existing:
+            print(f"✅ DRV004: مجلد موجود — {folder_name} ({existing[0]['id']})")
+            return existing[0]["id"]
+
+        # إنشاء مجلد جديد
+        folder_metadata = {
+            "name":     folder_name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents":  [parent_id],
+        }
+        folder = service.files().create(body=folder_metadata, fields="id").execute()
+        folder_id = folder.get("id")
+        print(f"✅ DRV004: تم إنشاء مجلد — {folder_name} ({folder_id})")
+        return folder_id
+
+    except Exception as e:
+        print(f"❌ DRV004: {e}")
+        return None
+
+
+def DRV005(file_path, file_name, folder_id=DRIVE_FOLDER_ID):
+    """
+    رفع ملف مباشرة إلى المجلد الرئيسي (بدون مجلد موضوع)
+    مفيد للمرفقات العامة أو الشحنات
+    يُرجع: drive_link أو None
+    """
+    try:
+        from googleapiclient.http import MediaFileUpload
+        import mimetypes
+
+        service = P001D()
+        if not service:
+            return None
+
+        mime_type, _ = mimetypes.guess_type(file_name)
+        if not mime_type:
+            mime_type = "application/octet-stream"
+
+        file_metadata = {
+            "name":    file_name,
+            "parents": [folder_id],
+        }
+        media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+        uploaded = service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, webViewLink"
+        ).execute()
+
+        file_id    = uploaded.get("id")
+        drive_link = uploaded.get("webViewLink", f"https://drive.google.com/file/d/{file_id}/view")
+
+        # منح صلاحية عرض للجميع
+        service.permissions().create(
+            fileId=file_id,
+            body={"type": "anyone", "role": "reader"}
+        ).execute()
+
+        print(f"✅ DRV005: تم رفع الملف — {file_name} → {drive_link}")
+        return drive_link
+
+    except Exception as e:
+        print(f"❌ DRV005: {e}")
+        return None
 
 # ─────────────────────────────────────────────
 # Telegram Message Functions
