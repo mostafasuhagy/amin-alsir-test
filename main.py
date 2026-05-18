@@ -6,6 +6,8 @@ from telegram.ext import (
 from routines import *
 from primitives import *
 from datetime import datetime
+import os
+import tempfile
 
 TOKEN = "8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk"
 
@@ -148,6 +150,123 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ─────────────────────────────────────────────
+# HELPER — تحميل ملف من تيليجرام ورفعه على Drive
+# ─────────────────────────────────────────────
+async def _upload_telegram_file_to_drive(context, message, topic_code):
+    """
+    يحمّل الملف من تيليجرام ويرفعه على Drive.
+    يُرجع: (drive_link, file_name) أو (None, None)
+    """
+    try:
+        if message.document:
+            tg_file   = message.document
+            file_name = tg_file.file_name or f"doc_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+        elif message.photo:
+            tg_file   = message.photo[-1]
+            file_name = f"photo_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+        else:
+            return None, None
+
+        # تحميل مؤقت
+        file_obj = await context.bot.get_file(tg_file.file_id)
+        with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file_name)[-1]) as tmp:
+            await file_obj.download_to_drive(tmp.name)
+            tmp_path = tmp.name
+
+        # رفع على Drive
+        drive_link = DRV001(tmp_path, file_name, topic_code)
+        os.unlink(tmp_path)  # حذف الملف المؤقت
+        return drive_link, file_name
+
+    except Exception as e:
+        print(f"❌ _upload_telegram_file_to_drive: {e}")
+        return None, None
+
+# ─────────────────────────────────────────────
+# file_router — يستقبل الملفات (document / photo)
+# ─────────────────────────────────────────────
+async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    routine = context.user_data.get("routine")
+    step    = context.user_data.get("step")
+    if not routine or not step:
+        return
+
+    chat_id  = update.effective_chat.id
+    message  = update.message
+    data     = context.user_data.setdefault("data", {})
+    back_btn = [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]]
+
+    # ─── D001: ملف مستند وارد (اختياري) ───
+    if routine == "RD001" and step == "file_upload":
+        topic_code = data.get("topic_code", "general")
+        await T001(context, chat_id, "⏳ جاري رفع الملف على Drive...")
+
+        drive_link, file_name = await _upload_telegram_file_to_drive(context, message, topic_code)
+
+        code = G001("Doc", "Documents")
+        ok = P003("Documents", [
+            code,
+            data["topic_code"],
+            data["doc_name"],
+            data["doc_source"],
+            "وارد",
+            "قيد المراجعة",
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+            drive_link or ""  # رابط Drive في عمود notes
+        ])
+        context.user_data.clear()
+        if ok:
+            msg = (
+                f"✅ *تم تسجيل المستند الوارد!*\n\n"
+                f"🔹 الكود: `{code}`\n"
+                f"📄 {data['doc_name']}\n"
+                f"🏢 من: {data['doc_source']}\n"
+            )
+            if drive_link:
+                msg += f"🔗 [فتح الملف على Drive]({drive_link})"
+            await T002(context, chat_id, msg, back_btn)
+        else:
+            await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
+
+    # ─── S001: ملف شحنة صادرة (إجباري) ───
+    elif routine == "RS001" and step == "file_upload":
+        topic_code = data.get("topic_code", "general")
+        await T001(context, chat_id, "⏳ جاري رفع المرفق على Drive...")
+
+        drive_link, file_name = await _upload_telegram_file_to_drive(context, message, topic_code)
+
+        if not drive_link:
+            await T001(context, chat_id, "❌ فشل رفع الملف. أعد الإرسال:")
+            return
+
+        code = G001("Sh", "Shipments")
+        ok = P003("Shipments", [
+            code,
+            data["topic_code"],
+            data["sender"],
+            data["receiver"],
+            datetime.now().strftime("%Y-%m-%d %H:%M"),  # send_date
+            file_name or data["file_name"],
+            "",                                          # file_type
+            data["pickup_location"],
+            "في الطريق",                                 # receive_status
+            "",                                          # receive_date
+            drive_link                                   # notes = رابط Drive
+        ])
+        context.user_data.clear()
+        if ok:
+            await T002(context, chat_id,
+                f"✅ *تم تسجيل الشحنة الصادرة!*\n\n"
+                f"🔹 الكود: `{code}`\n"
+                f"📤 من: {data['sender']}\n"
+                f"📥 إلى: {data['receiver']}\n"
+                f"📄 {file_name or data['file_name']}\n"
+                f"🔗 [فتح الملف على Drive]({drive_link})",
+                back_btn)
+        else:
+            await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
+
+# ─────────────────────────────────────────────
 # text_router — يستقبل ردود المستخدم
 # ─────────────────────────────────────────────
 async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -262,7 +381,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif step == "new_value":
             field = data.get("field")
-            # عمود A=1:client_code | B=2:client_name | C=3:national_id | D=4:mobile | E=5:address | F=6:date_added
             col_map = {"1": (2, "client_name"), "2": (4, "mobile"), "3": (5, "address")}
             col_num, _ = col_map[field]
             if field == "2" and not V003(text):
@@ -292,7 +410,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RA001 — إضافة مساعد جديد
-    # أعمدة Assistants: assistant_code(A) | assistant_name(B) | bar_number(C) | mobile(D) | date_added(E) | notes(F) | attachments_code(G)
     # ═══════════════════════════════════════════
     elif routine == "RA001":
         if step == "name":
@@ -300,11 +417,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ الاسم قصير:")
                 return
             data["name"] = text
-            context.user_data["step"] = "bar_number"
-            await T002(context, chat_id, "🪪 أدخل *رقم النقابة* (أو اكتب — للتخطي):", cancel_btn)
-
-        elif step == "bar_number":
-            data["bar_number"] = text
             context.user_data["step"] = "mobile"
             await T002(context, chat_id, "📱 أدخل *رقم الموبايل*:", cancel_btn)
 
@@ -315,13 +427,10 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["mobile"] = text
             code = G001("As", "Assistants")
             ok = P003("Assistants", [
-                code,                                        # A: assistant_code
-                data["name"],                                # B: assistant_name
-                data["bar_number"],                          # C: bar_number
-                data["mobile"],                              # D: mobile
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # E: date_added
-                "",                                          # F: notes
-                ""                                           # G: attachments_code
+                code,
+                data["name"],
+                data["mobile"],
+                datetime.now().strftime("%Y-%m-%d %H:%M")
             ])
             context.user_data.clear()
             if ok:
@@ -345,7 +454,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👤 *بيانات المساعد*\n\n"
                 f"🔹 الكود: `{text}`\n"
                 f"📛 الاسم: {asst.get('assistant_name', '—')}\n"
-                f"🪪 رقم النقابة: {asst.get('bar_number', '—')}\n"
                 f"📱 الموبايل: {asst.get('mobile', '—')}\n"
                 f"📅 تاريخ الإضافة: {asst.get('date_added', '—')}"
             )
@@ -353,7 +461,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RT001 — إضافة موضوع جديد
-    # أعمدة Topics: topic_code | client_code | client_name | service_code | service_name | assistant_code | assistant_name | date_opened | status | notes
     # ═══════════════════════════════════════════
     elif routine == "RT001":
         if step == "client_code":
@@ -380,16 +487,16 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["topic_type"] = text
             code = G001("Tp", "Topics")
             ok = P003("Topics", [
-                code,                                          # A: topic_code
-                data["client_code"],                           # B: client_code
-                data["client_name"],                           # C: client_name
-                "",                                            # D: service_code
-                data["title"],                                 # E: service_name (عنوان الموضوع)
-                "",                                            # F: assistant_code
-                "",                                            # G: assistant_name
-                datetime.now().strftime("%Y-%m-%d %H:%M"),    # H: date_opened
-                "جديد",                                        # I: status
-                data["topic_type"]                             # J: notes (نوع الموضوع)
+                code,
+                data["client_code"],
+                data["client_name"],
+                "",
+                data["title"],
+                "",
+                "",
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "جديد",
+                data["topic_type"]
             ])
             context.user_data.clear()
             if ok:
@@ -416,10 +523,10 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg = f"📋 *موضوعات العميل: {client.get('client_name', '')}*\n\n"
             for t in topics:
                 code   = list(t.values())[0]
-                title  = t.get("service_name", "—")   # E: عنوان الموضوع
-                ntype  = t.get("notes", "—")           # J: نوع الموضوع
-                status = t.get("status", "—")          # I: الحالة
-                date   = t.get("date_opened", "—")    # H: تاريخ الفتح
+                title  = t.get("service_name", "—")
+                ntype  = t.get("notes", "—")
+                status = t.get("status", "—")
+                date   = t.get("date_opened", "—")
                 msg += (
                     f"🔹 `{code}`\n"
                     f"   📋 العنوان: {title}\n"
@@ -460,7 +567,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ لم يُعثر على الموضوع.")
                 context.user_data.clear()
                 return
-            ok = P004("Topics", row_num, 9, text)  # I: status = عمود 9
+            ok = P004("Topics", row_num, 9, text)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id,
@@ -501,7 +608,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ لم يُعثر على الموضوع.")
                 context.user_data.clear()
                 return
-            ok = P004("Topics", row_num, 9, "مؤرشف")  # I: status = عمود 9
+            ok = P004("Topics", row_num, 9, "مؤرشف")
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id,
@@ -512,7 +619,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RE001 — إضافة حدث جديد
-    # أعمدة Events: event_code | event_date | topic_code | client_name | event_type | event_time | location_court | result | status
     # ═══════════════════════════════════════════
     elif routine == "RE001":
         if step == "title":
@@ -561,9 +667,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 data["client_name"],
                 data["event_type"],
                 data["event_time"],
-                data["location"],   # location_court
-                "",                 # result
-                "قادم"              # status
+                data["location"],
+                "",
+                "قادم"
             ])
             context.user_data.clear()
             if ok:
@@ -575,7 +681,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RE002 — تسجيل نتيجة حدث
-    # أعمدة Events: event_code(1) | event_date(2) | topic_code(3) | client_name(4) | event_type(5) | event_time(6) | location_court(7) | result(8) | status(9)
     # ═══════════════════════════════════════════
     elif routine == "RE002":
         if step == "event_code":
@@ -598,8 +703,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Events")
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["event_code"]):
-                    P004("Events", i, 8, text)      # result = عمود 8
-                    P004("Events", i, 9, "منتهي")   # status = عمود 9
+                    P004("Events", i, 8, text)
+                    P004("Events", i, 9, "منتهي")
                     break
             context.user_data.clear()
             await T002(context, chat_id,
@@ -607,8 +712,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 back_btn)
 
     # ═══════════════════════════════════════════
-    # RD001 — رفع مستند وارد
-    # أعمدة Documents: doc_code | topic_code | doc_name | doc_source | direction | doc_status | date_added | notes
+    # RD001 — رفع مستند وارد (بيانات نصية)
     # ═══════════════════════════════════════════
     elif routine == "RD001":
         if step == "topic_code":
@@ -637,6 +741,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ المصدر قصير:")
                 return
             data["doc_source"] = text
+            context.user_data["step"] = "file_upload"
+            await T002(context, chat_id,
+                "📎 أرسل *الملف* الآن (PDF / صورة)\n\nأو اكتب *تخطي* إذا لم يكن لديك ملف:",
+                cancel_btn)
+
+        elif step == "file_upload" and text.strip() == "تخطي":
+            # حفظ بدون ملف
             code = G001("Doc", "Documents")
             ok = P003("Documents", [
                 code,
@@ -651,10 +762,10 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id,
-                    f"✅ *تم تسجيل المستند الوارد!*\n\n🔹 الكود: `{code}`\n📄 {data['doc_name']}\n🏢 من: {data['doc_source']}",
+                    f"✅ *تم تسجيل المستند الوارد!*\n\n🔹 الكود: `{code}`\n📄 {data['doc_name']}\n🏢 من: {data['doc_source']}\n_(بدون ملف مرفق)_",
                     back_btn)
             else:
-                await T001(context, chat_id, "❌ حدث خطأ.")
+                await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
 
     # ═══════════════════════════════════════════
     # RD002 — طلب مستندات من جهة خارجية
@@ -694,7 +805,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RD003 — الموافقة على مستند
-    # أعمدة Documents: doc_code(1) | topic_code(2) | doc_name(3) | doc_source(4) | direction(5) | doc_status(6) | date_added(7) | notes(8)
     # ═══════════════════════════════════════════
     elif routine == "RD003":
         if step == "doc_code":
@@ -707,7 +817,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents")
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Documents", i, 6, "موافق عليه")  # doc_status = عمود 6
+                    P004("Documents", i, 6, "موافق عليه")
                     break
             context.user_data.clear()
             await T002(context, chat_id,
@@ -738,8 +848,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents")
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["doc_code"]):
-                    P004("Documents", i, 6, "مرفوض")  # doc_status = عمود 6
-                    P004("Documents", i, 8, text)      # notes = عمود 8
+                    P004("Documents", i, 6, "مرفوض")
+                    P004("Documents", i, 8, text)
                     break
             context.user_data.clear()
             await T002(context, chat_id,
@@ -747,7 +857,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 back_btn)
 
     # ═══════════════════════════════════════════
-    # RD005 — عرض مستندات موضوع
+    # RD005 — عرض مستندات موضوع (مع روابط Drive)
     # ═══════════════════════════════════════════
     elif routine == "RD005":
         if step == "topic_code":
@@ -763,10 +873,14 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             title = topic.get("service_name", text)
             msg = f"📂 *مستندات الموضوع: {title}*\n\n"
             for d in docs:
-                code   = list(d.values())[0]
-                name   = d.get("doc_name", "—")
-                status = d.get("doc_status", "—")
-                msg += f"🔹 `{code}` — {name} — [{status}]\n"
+                code       = list(d.values())[0]
+                name       = d.get("doc_name", "—")
+                status     = d.get("doc_status", "—")
+                drive_link = d.get("notes", "")  # رابط Drive محفوظ في notes
+                line = f"🔹 `{code}` — {name} — [{status}]"
+                if drive_link and drive_link.startswith("http"):
+                    line += f"\n   🔗 [فتح الملف]({drive_link})"
+                msg += line + "\n\n"
             await T002(context, chat_id, msg, back_btn)
 
     # ═══════════════════════════════════════════
@@ -795,7 +909,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             count = 0
             for i, r in enumerate(records, start=2):
                 if str(r.get("topic_code", "")) == str(data["topic_code"]):
-                    P004("Documents", i, 6, "مؤرشف")  # doc_status = عمود 6
+                    P004("Documents", i, 6, "مؤرشف")
                     count += 1
             context.user_data.clear()
             await T002(context, chat_id,
@@ -803,8 +917,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 back_btn)
 
     # ═══════════════════════════════════════════
-    # RS001 — إرسال مرفقات (شحنة صادرة)
-    # أعمدة Shipments: shipment_code(1) | topic_code(2) | sender(3) | receiver(4) | send_date(5) | file_name(6) | file_type(7) | pickup_location(8) | receive_status(9) | receive_date(10) | notes(11)
+    # RS001 — إرسال مرفقات (شحنة صادرة) — بيانات نصية أولاً
     # ═══════════════════════════════════════════
     elif routine == "RS001":
         if step == "topic_code":
@@ -833,7 +946,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             data["receiver"] = text
             context.user_data["step"] = "file_name"
-            await T002(context, chat_id, "📄 أدخل *اسم الملف أو المحتوى*:", cancel_btn)
+            await T002(context, chat_id, "📄 أدخل *اسم الملف أو وصف المحتوى*:", cancel_btn)
 
         elif step == "file_name":
             if not V001(text):
@@ -845,27 +958,10 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         elif step == "pickup_location":
             data["pickup_location"] = text
-            code = G001("Sh", "Shipments")
-            ok = P003("Shipments", [
-                code,
-                data["topic_code"],
-                data["sender"],
-                data["receiver"],
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # send_date
-                data["file_name"],
-                "",                                          # file_type
-                data["pickup_location"],
-                "في الطريق",                                 # receive_status
-                "",                                          # receive_date
-                ""                                           # notes
-            ])
-            context.user_data.clear()
-            if ok:
-                await T002(context, chat_id,
-                    f"✅ *تم تسجيل الشحنة الصادرة!*\n\n🔹 الكود: `{code}`\n📤 من: {data['sender']}\n📥 إلى: {data['receiver']}\n📄 {data['file_name']}",
-                    back_btn)
-            else:
-                await T001(context, chat_id, "❌ حدث خطأ.")
+            context.user_data["step"] = "file_upload"
+            await T002(context, chat_id,
+                "📎 أرسل *الملف المرفق* الآن (PDF / صورة / مستند):",
+                cancel_btn)
 
     # ═══════════════════════════════════════════
     # RS002 — استلام شحنة واردة
@@ -893,8 +989,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Shipments")
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["shipment_code"]):
-                    P004("Shipments", i, 9,  "مستلم")                              # receive_status = عمود 9
-                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"))  # receive_date = عمود 10
+                    P004("Shipments", i, 9,  "مستلم")
+                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"))
                     break
             context.user_data.clear()
             await T002(context, chat_id,
@@ -903,7 +999,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RS003 — تتبع حالة شحنة
-    # أعمدة Shipments: shipment_code | topic_code | sender | receiver | send_date | file_name | file_type | pickup_location | receive_status | receive_date | notes
     # ═══════════════════════════════════════════
     elif routine == "RS003":
         if step == "shipment_code":
@@ -921,7 +1016,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pickup_location = shipment.get("pickup_location", "—")
             receive_status  = shipment.get("receive_status", "—")
             receive_date    = shipment.get("receive_date", "—")
-            notes           = shipment.get("notes", "—")
+            drive_link      = shipment.get("notes", "")
             msg = (
                 f"📦 *بيانات الشحنة*\n\n"
                 f"🔹 الكود: `{code}`\n"
@@ -932,14 +1027,14 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📄 المحتوى: {file_name}\n"
                 f"📍 مكان التسليم: {pickup_location}\n"
                 f"🔄 حالة الاستلام: {receive_status}\n"
-                f"📅 تاريخ الاستلام: {receive_date}\n"
-                f"📝 ملاحظات: {notes}"
+                f"📅 تاريخ الاستلام: {receive_date}"
             )
+            if drive_link and drive_link.startswith("http"):
+                msg += f"\n🔗 [فتح الملف على Drive]({drive_link})"
             await T002(context, chat_id, msg, back_btn)
 
     # ═══════════════════════════════════════════
     # RM001 — طلب عهدة مالية
-    # أعمدة Custody: custody_code(1) | responsible_code(2) | amount(3) | payment_due(4) | payment_status(5) | actual_payment_date(6) | notes(7)
     # ═══════════════════════════════════════════
     elif routine == "RM001":
         if step == "amount":
@@ -957,13 +1052,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["reason"] = text
             code = G001("Fn", "Custody")
             ok = P003("Custody", [
-                code,           # A: custody_code
-                "",             # B: responsible_code
-                data["amount"], # C: amount
-                data["reason"], # D: payment_due (السبب)
-                "طلب",          # E: payment_status
-                "",             # F: actual_payment_date
-                ""              # G: notes
+                code,
+                data["amount"],
+                data["reason"],
+                "طلب",
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "",
+                ""
             ])
             context.user_data.clear()
             if ok:
@@ -975,7 +1070,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ═══════════════════════════════════════════
     # RM002 — تسوية عهدة مالية
-    # أعمدة Custody: custody_code(1) | responsible_code(2) | amount(3) | payment_due(4) | payment_status(5) | actual_payment_date(6) | notes(7)
     # ═══════════════════════════════════════════
     elif routine == "RM002":
         if step == "fund_code":
@@ -986,7 +1080,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             data["fund_code"] = text
             data["amount"]    = fund.get("amount", "—")
-            data["reason"]    = fund.get("payment_due", "—")
+            data["reason"]    = fund.get("reason", "—")
             context.user_data["step"] = "spent"
             await T002(context, chat_id,
                 f"💰 *بيانات العهدة*\n\n🔹 الكود: `{text}`\n💵 المبلغ الكلي: {data['amount']} جنيه\n📝 السبب: {data['reason']}\n\n💳 أدخل *المبلغ المصروف فعلياً*:",
@@ -1012,9 +1106,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ لم يُعثر على العهدة.")
                 context.user_data.clear()
                 return
-            P004("Custody", row_num, 5, "مسوّاة")                              # E: payment_status = عمود 5
-            P004("Custody", row_num, 6, datetime.now().strftime("%Y-%m-%d %H:%M"))  # F: actual_payment_date = عمود 6
-            P004("Custody", row_num, 7, data["notes"])                          # G: notes = عمود 7
+            P004("Custody", row_num, 4, "مسوّاة")
+            P004("Custody", row_num, 6, data["spent"])
+            P004("Custody", row_num, 7, data["notes"])
             context.user_data.clear()
             await T002(context, chat_id,
                 f"✅ *تمت التسوية!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 المبلغ الكلي: {data['amount']} جنيه\n💳 المصروف: {data['spent']} جنيه\n📝 الملاحظات: {data['notes']}",
@@ -1035,13 +1129,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     back_btn)
             else:
                 await T002(context, chat_id,
-                    f"⚠️ *تم تسجيل الإشعار:*\n\n🔔 {text}\n\nلم يُرسَل — BOSS CHAT ID غير مضبوط",
+                    f"⚠️ *تم تسجيل الإشعار:*\n\n🔔 {text}\n\n_(لم يُرسَل — BOSS\_CHAT\_ID غير مضبوط)_",
                     back_btn)
             context.user_data.clear()
 
     # ═══════════════════════════════════════════
     # RN002 — إشعار للعميل
-    # أعمدة Notifications: notif_code(1) | target_type(2) | target_code(3) | target_name(4) | message(5) | date_sent(6)
     # ═══════════════════════════════════════════
     elif routine == "RN002":
         if step == "client_code":
@@ -1157,5 +1250,6 @@ if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(menu_router))
+    app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.run_polling(drop_pending_updates=True)
