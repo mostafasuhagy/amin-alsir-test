@@ -8,11 +8,17 @@ from datetime import datetime
 from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
+CALENDAR_ID = "mostafa.suhagy@gmail.com"  # Google Calendar ID
+
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
-    "https://www.googleapis.com/auth/drive"
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/calendar",  # ✅ Google Calendar
 ]
 
+# ─────────────────────────────────────────────
+# P001 — الاتصال بـ Google Sheets
+# ─────────────────────────────────────────────
 def P001(sheet_name=SHEET_NAME):
     try:
         creds_json = os.environ.get("GOOGLE_CREDENTIALS")
@@ -24,6 +30,24 @@ def P001(sheet_name=SHEET_NAME):
         print(f"❌ P001: {e}")
         return None
 
+# ─────────────────────────────────────────────
+# P001C — الاتصال بـ Google Calendar
+# ─────────────────────────────────────────────
+def P001C():
+    try:
+        from googleapiclient.discovery import build
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+        creds_dict = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        service = build("calendar", "v3", credentials=creds)
+        return service
+    except Exception as e:
+        print(f"❌ P001C: {e}")
+        return None
+
+# ─────────────────────────────────────────────
+# Google Sheets Functions
+# ─────────────────────────────────────────────
 def P002(tab, ref_code, sheet_name=SHEET_NAME):
     try:
         ws = P001(sheet_name).worksheet(tab)
@@ -73,6 +97,9 @@ def G001(prefix, tab, sheet_name=SHEET_NAME):
         print(f"❌ G001: {e}")
         return f"{prefix}-001"
 
+# ─────────────────────────────────────────────
+# Validators
+# ─────────────────────────────────────────────
 def V001(text):
     return bool(text) and isinstance(text, str) and len(text.strip()) >= 3
 
@@ -95,6 +122,156 @@ def V005(amount):
         return float(str(amount).replace(",", "")) > 0
     except: return False
 
+# ─────────────────────────────────────────────
+# Google Calendar Functions
+# ─────────────────────────────────────────────
+
+def CAL001(title, date_str, time_str="", location="", description="", calendar_id=CALENDAR_ID):
+    """
+    إضافة حدث جديد في Google Calendar
+    date_str: DD/MM/YYYY أو YYYY-MM-DD
+    time_str: HH:MM (اختياري)
+    """
+    try:
+        service = P001C()
+        if not service:
+            return None
+
+        # تحويل التاريخ
+        for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
+            try:
+                date_obj = datetime.strptime(date_str.strip(), fmt)
+                break
+            except: continue
+        else:
+            print(f"❌ CAL001: تنسيق التاريخ غير صحيح: {date_str}")
+            return None
+
+        # بناء الحدث
+        if time_str:
+            try:
+                hour, minute = time_str.strip().split(":")[:2]
+                minute = minute[:2]
+                start_dt = date_obj.replace(hour=int(hour), minute=int(minute))
+                end_dt   = start_dt.replace(hour=int(hour)+1)
+                event = {
+                    "summary":     title,
+                    "location":    location,
+                    "description": description,
+                    "start": {"dateTime": start_dt.strftime("%Y-%m-%dT%H:%M:00"), "timeZone": "Africa/Cairo"},
+                    "end":   {"dateTime": end_dt.strftime("%Y-%m-%dT%H:%M:00"),   "timeZone": "Africa/Cairo"},
+                }
+            except:
+                event = {
+                    "summary":     title,
+                    "location":    location,
+                    "description": description,
+                    "start": {"date": date_obj.strftime("%Y-%m-%d")},
+                    "end":   {"date": date_obj.strftime("%Y-%m-%d")},
+                }
+        else:
+            event = {
+                "summary":     title,
+                "location":    location,
+                "description": description,
+                "start": {"date": date_obj.strftime("%Y-%m-%d")},
+                "end":   {"date": date_obj.strftime("%Y-%m-%d")},
+            }
+
+        result = service.events().insert(calendarId=calendar_id, body=event).execute()
+        event_id = result.get("id")
+        print(f"✅ CAL001: تم إضافة الحدث — {event_id}")
+        return event_id
+
+    except Exception as e:
+        print(f"❌ CAL001: {e}")
+        return None
+
+
+def CAL002(calendar_id=CALENDAR_ID, days_ahead=30):
+    """
+    عرض الأحداث القادمة من Google Calendar
+    """
+    try:
+        service = P001C()
+        if not service:
+            return []
+
+        now = datetime.utcnow().isoformat() + "Z"
+        result = service.events().list(
+            calendarId=calendar_id,
+            timeMin=now,
+            maxResults=20,
+            singleEvents=True,
+            orderBy="startTime"
+        ).execute()
+
+        events = result.get("items", [])
+        formatted = []
+        for e in events:
+            start = e["start"].get("dateTime", e["start"].get("date", ""))
+            formatted.append({
+                "id":          e.get("id", ""),
+                "title":       e.get("summary", "—"),
+                "start":       start,
+                "location":    e.get("location", ""),
+                "description": e.get("description", ""),
+            })
+        return formatted
+
+    except Exception as e:
+        print(f"❌ CAL002: {e}")
+        return []
+
+
+def CAL003(event_id, calendar_id=CALENDAR_ID):
+    """
+    حذف حدث من Google Calendar
+    """
+    try:
+        service = P001C()
+        if not service:
+            return False
+        service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+        print(f"✅ CAL003: تم حذف الحدث — {event_id}")
+        return True
+    except Exception as e:
+        print(f"❌ CAL003: {e}")
+        return False
+
+
+def CAL004(event_id, updates, calendar_id=CALENDAR_ID):
+    """
+    تعديل حدث في Google Calendar
+    updates: dict مثل {"summary": "عنوان جديد", "location": "مكان جديد"}
+    """
+    try:
+        service = P001C()
+        if not service:
+            return False
+        event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
+        event.update(updates)
+        service.events().update(calendarId=calendar_id, eventId=event_id, body=event).execute()
+        print(f"✅ CAL004: تم تعديل الحدث — {event_id}")
+        return True
+    except Exception as e:
+        print(f"❌ CAL004: {e}")
+        return False
+
+
+def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
+    """
+    تسجيل نتيجة حدث في Google Calendar (تحديث الوصف)
+    """
+    try:
+        return CAL004(event_id, {"description": f"النتيجة: {result_text}"}, calendar_id)
+    except Exception as e:
+        print(f"❌ CAL005: {e}")
+        return False
+
+# ─────────────────────────────────────────────
+# Telegram Message Functions
+# ─────────────────────────────────────────────
 async def T001(context, chat_id, text):
     try:
         return await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
@@ -145,6 +322,9 @@ async def T005(context, chat_id, text, options):
         print(f"❌ T005: {e}")
         return None
 
+# ─────────────────────────────────────────────
+# Notification Functions
+# ─────────────────────────────────────────────
 async def N001(context, boss_chat_id, text):
     try:
         await context.bot.send_message(chat_id=boss_chat_id, text=f"🔔 *إشعار — أمين السر*\n\n{text}", parse_mode="Markdown")
@@ -169,6 +349,9 @@ async def N003(context, assistant_chat_id, text):
         print(f"❌ N003: {e}")
         return False
 
+# ─────────────────────────────────────────────
+# Events Helper Functions
+# ─────────────────────────────────────────────
 def C001(title, date, location=""):
     try:
         if not V001(title) or not V004(date): return None
@@ -211,6 +394,9 @@ def C003():
         print(f"❌ C003: {e}")
         return []
 
+# ─────────────────────────────────────────────
+# Link Functions
+# ─────────────────────────────────────────────
 def L001(user_type, ref_code):
     try:
         token = hashlib.sha256(f"{user_type}:{ref_code}:{int(time.time())}".encode()).hexdigest()[:16]
