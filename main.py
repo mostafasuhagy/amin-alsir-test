@@ -140,9 +140,63 @@ def notify_keyboard():
     ])
 
 # ─────────────────────────────────────────────
-# /start
+# /start — مع استقبال Deep Link وتسجيل chat_id
 # ─────────────────────────────────────────────
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    args    = context.args  # الباراميتر بعد /start
+
+    # ── استقبال Deep Link (client_Cl-001 أو assistant_As-001) ──
+    if args:
+        param = args[0]  # مثال: client_Cl-001
+
+        if param.startswith("client_"):
+            ref_code = param.replace("client_", "")
+            # تسجيل chat_id في شيت Clients
+            records = P005("Clients")
+            for i, r in enumerate(records, start=2):
+                if str(r.get("client_code", "")) == str(ref_code):
+                    P004("Clients", i, 8, str(chat_id))  # H: telegram_chat_id = عمود 8
+                    client_name = r.get("client_name", "")
+                    await update.message.reply_text(
+                        f"أهلاً *{client_name}* 👋\n\n"
+                        f"تم ربط حسابك بنجاح مع مكتب المحاماة ✅\n"
+                        f"ستصلك الإشعارات المتعلقة بقضاياك هنا مباشرة 📲",
+                        parse_mode="Markdown"
+                    )
+                    # إشعار للرئيس
+                    if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                        await N001(context, BOSS_CHAT_ID,
+                            f"✅ العميل *{client_name}* (`{ref_code}`) ربط حسابه على تيليجرام")
+                    return
+
+            await update.message.reply_text("❌ الرابط غير صحيح أو منتهي الصلاحية.")
+            return
+
+        elif param.startswith("assistant_"):
+            ref_code = param.replace("assistant_", "")
+            # تسجيل chat_id في شيت Assistants
+            records = P005("Assistants")
+            for i, r in enumerate(records, start=2):
+                if str(r.get("assistant_code", "")) == str(ref_code):
+                    P004("Assistants", i, 8, str(chat_id))  # H: telegram_chat_id = عمود 8
+                    asst_name = r.get("assistant_name", "")
+                    await update.message.reply_text(
+                        f"أهلاً *{asst_name}* 👋\n\n"
+                        f"تم ربط حسابك بنجاح ✅\n"
+                        f"ستصلك المهام والإشعارات هنا مباشرة 📲",
+                        parse_mode="Markdown"
+                    )
+                    # إشعار للرئيس
+                    if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                        await N001(context, BOSS_CHAT_ID,
+                            f"✅ المساعد *{asst_name}* (`{ref_code}`) ربط حسابه على تيليجرام")
+                    return
+
+            await update.message.reply_text("❌ الرابط غير صحيح أو منتهي الصلاحية.")
+            return
+
+    # ── الدخول العادي بدون Deep Link ──
     await update.message.reply_text(
         "أهلاً بك في *أمين السر* 🏛️\n\nاختر من لوحة القيادة:",
         parse_mode="Markdown",
@@ -322,13 +376,24 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 data["national_id"],
                 data["mobile"],
                 data["address"],
-                datetime.now().strftime("%Y-%m-%d %H:%M")
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "",   # notes
+                ""    # telegram_chat_id (فاضي — هيتملى لما العميل يضغط الرابط)
             ])
             context.user_data.clear()
             if ok:
+                link = f"https://t.me/amin_alsir_bot?start=client_{code}"
                 await T002(context, chat_id,
-                    f"✅ *تم إضافة العميل!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n📱 {data['mobile']}",
+                    f"✅ *تم إضافة العميل!*\n\n"
+                    f"🔹 الكود: `{code}`\n"
+                    f"👤 {data['name']}\n"
+                    f"📱 {data['mobile']}\n\n"
+                    f"🔗 *رابط ربط العميل بالبوت:*\n`{link}`\n\n"
+                    f"_(أرسل هذا الرابط للعميل على واتساب أو تيليجرام)_",
                     back_btn)
+                if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                    await N001(context, BOSS_CHAT_ID,
+                        f"👤 تم إضافة عميل جديد\n🔹 الكود: `{code}`\n📛 {data['name']}\n📱 {data['mobile']}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
 
@@ -430,13 +495,26 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 code,
                 data["name"],
                 data["mobile"],
-                datetime.now().strftime("%Y-%m-%d %H:%M")
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "",   # notes
+                "",   # attachments_code
+                "",   # bar_number
+                ""    # telegram_chat_id
             ])
             context.user_data.clear()
             if ok:
+                link = f"https://t.me/amin_alsir_bot?start=assistant_{code}"
                 await T002(context, chat_id,
-                    f"✅ *تم إضافة المساعد!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n📱 {data['mobile']}",
+                    f"✅ *تم إضافة المساعد!*\n\n"
+                    f"🔹 الكود: `{code}`\n"
+                    f"👤 {data['name']}\n"
+                    f"📱 {data['mobile']}\n\n"
+                    f"🔗 *رابط ربط المساعد بالبوت:*\n`{link}`\n\n"
+                    f"_(أرسل هذا الرابط للمساعد على واتساب أو تيليجرام)_",
                     back_btn)
+                if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                    await N001(context, BOSS_CHAT_ID,
+                        f"👥 تم إضافة مساعد جديد\n🔹 الكود: `{code}`\n📛 {data['name']}\n📱 {data['mobile']}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -503,6 +581,20 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T002(context, chat_id,
                     f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}\n📌 النوع: {data['topic_type']}",
                     back_btn)
+                # إشعار تلقائي للعميل
+                client = P002("Clients", data["client_code"])
+                if client:
+                    client_tg = client.get("telegram_chat_id", "")
+                    if client_tg:
+                        await N002(context, int(client_tg),
+                            f"📋 *تم فتح موضوع جديد لك*\n\n"
+                            f"🔹 الكود: `{code}`\n"
+                            f"📌 {data['title']}\n"
+                            f"📅 {datetime.now().strftime('%Y-%m-%d')}")
+                # إشعار للرئيس
+                if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                    await N001(context, BOSS_CHAT_ID,
+                        f"📋 موضوع جديد\n🔹 `{code}`\n👤 {data['client_name']}\n📌 {data['title']}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -676,6 +768,23 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T002(context, chat_id,
                     f"✅ *تم إضافة الحدث!*\n\n🔹 الكود: `{code}`\n📅 {data['event_date']} — {data['event_type']}\n📍 {data['location']}",
                     back_btn)
+                # إشعار تلقائي للرئيس
+                if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                    await N001(context, BOSS_CHAT_ID,
+                        f"📅 حدث جديد\n🔹 `{code}`\n⚖️ {data['event_type']}\n📅 {data['event_date']}\n📍 {data['location']}\n👤 {data['client_name']}")
+                # إشعار تلقائي للعميل
+                topic = P002("Topics", data["topic_code"])
+                if topic:
+                    client = P002("Clients", topic.get("client_code", ""))
+                    if client:
+                        client_tg = client.get("telegram_chat_id", "")
+                        if client_tg:
+                            await N002(context, int(client_tg),
+                                f"📅 *تم تحديد موعد جديد لقضيتك*\n\n"
+                                f"⚖️ النوع: {data['event_type']}\n"
+                                f"📅 التاريخ: {data['event_date']}\n"
+                                f"⏰ الوقت: {data['event_time']}\n"
+                                f"📍 المكان: {data['location']}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -688,9 +797,11 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not event:
                 await T001(context, chat_id, "❌ كود الحدث غير موجود:")
                 return
-            data["event_code"] = text
-            data["event_type"] = event.get("event_type", "—")
-            data["event_date"] = event.get("event_date", "—")
+            data["event_code"]   = text
+            data["event_type"]   = event.get("event_type", "—")
+            data["event_date"]   = event.get("event_date", "—")
+            data["topic_code"]   = event.get("topic_code", "")
+            data["client_name"]  = event.get("client_name", "—")
             context.user_data["step"] = "result"
             await T002(context, chat_id,
                 f"📅 الحدث: *{data['event_type']}* — {data['event_date']}\n\n📝 أدخل *نتيجة الحدث*:",
@@ -710,6 +821,21 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id,
                 f"✅ *تم تسجيل النتيجة!*\n\n📝 {text}",
                 back_btn)
+            # إشعار تلقائي للرئيس
+            if BOSS_CHAT_ID and BOSS_CHAT_ID != 0:
+                await N001(context, BOSS_CHAT_ID,
+                    f"📢 نتيجة حدث\n⚖️ {data['event_type']} — {data['event_date']}\n👤 {data['client_name']}\n📝 {text}")
+            # إشعار تلقائي للعميل
+            topic = P002("Topics", data.get("topic_code", ""))
+            if topic:
+                client = P002("Clients", topic.get("client_code", ""))
+                if client:
+                    client_tg = client.get("telegram_chat_id", "")
+                    if client_tg:
+                        await N002(context, int(client_tg),
+                            f"📢 *نتيجة جلستك*\n\n"
+                            f"⚖️ {data['event_type']} — {data['event_date']}\n"
+                            f"📝 النتيجة: {text}")
 
     # ═══════════════════════════════════════════
     # RD001 — رفع مستند وارد (بيانات نصية)
