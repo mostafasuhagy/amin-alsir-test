@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0D1B4B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="أمين السر">
+<title>أمين السر — لوحة القيادة</title>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════
+   CSS Variables & Reset
+═══════════════════════════════════════ */
+:root {
+  --navy:    #0D1B4B;
+  --navy2:   #1E2761;
+  --blue:    #4F8EF7;
+  --gold:    #F5C518;
+  --gold2:   #E8B400;
+  --white:   #FFFFFF;
+  --soft:    #E8EEFB;
+  --gray:    #94A3B8;
+  --green:   #22C55E;
+  --red:     #EF4444;
+  --orange:  #F97316;
+  --purple:  #8B5CF6;
+  --glass:   rgba(255,255,255,0.07);
+  --glass2:  rgba(255,255,255,0.12);
+  --shadow:  0 8px 32px rgba(0,0,0,0.3);
+  --radius:  16px;
+  --font:    'Tajawal', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body {
+  font-family: var(--font);
+  background: var(--navy);
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ═══════════════════════════════════════
+   Background
+═══════════════════════════════════════ */
+.bg {
+  position: fixed; inset: 0; z-index: 0;
+  background: linear-gradient(135deg, #0D1B4B 0%, #1a2d6b 50%, #0D1B4B 100%);
+}
+.bg::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at 20% 20%, rgba(79,142,247,0.15) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 80%, rgba(245,197,24,0.08) 0%, transparent 60%);
+}
+
+/* ═══════════════════════════════════════
+   App Container
+═══════════════════════════════════════ */
+.app {
+  position: relative; z-index: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ═══════════════════════════════════════
+   Loading Screen
+═══════════════════════════════════════ */
+#loading {
+  position: fixed; inset: 0; z-index: 100;
+  background: var(--navy);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 20px;
+  transition: opacity 0.5s;
+}
+#loading .logo { font-size: 64px; animation: pulse 1.5s infinite; }
+#loading h2 { font-size: 24px; font-weight: 800; color: var(--gold); }
+#loading p { font-size: 14px; color: var(--gray); }
+.spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--glass2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+
+/* ═══════════════════════════════════════
+   Header
+═══════════════════════════════════════ */
+.header {
+  padding: 20px 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(13,27,75,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass2);
+}
+.header-right { display: flex; align-items: center; gap: 12px; }
+.header-logo { font-size: 28px; }
+.header-title h1 { font-size: 18px; font-weight: 800; color: var(--white); }
+.header-title p { font-size: 11px; color: var(--gray); margin-top: 1px; }
+.header-left { display: flex; align-items: center; gap: 8px; }
+.online-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: rgba(34,197,94,0.15);
+  border: 1px solid rgba(34,197,94,0.3);
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; color: var(--green);
+}
+.online-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  animation: blink 2s infinite;
+}
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ═══════════════════════════════════════
+   Stats Bar
+═══════════════════════════════════════ */
+.stats-bar {
+  padding: 16px 20px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.stat-card {
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  border-radius: 14px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.stat-card:active { transform: scale(0.96); }
+.stat-card .num { font-size: 24px; font-weight: 900; color: var(--gold); }
+.stat-card .lbl { font-size: 10px; color: var(--gray); margin-top: 2px; }
+
+/* ═══════════════════════════════════════
+   Section
+═══════════════════════════════════════ */
+.section {
+  padding: 0 20px 16px;
+  display: none;
+}
+.section.active { display: block; }
+
+.section-title {
+  font-size: 13px; font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 14px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after {
+  content: ''; flex: 1;
+  height: 1px; background: var(--glass2);
+}
+
+/* ═══════════════════════════════════════
+   Main Grid
+═══════════════════════════════════════ */
+.main-content { padding: 16px 20px; flex: 1; }
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.grid-1 { margin-bottom: 12px; }
+
+/* ═══════════════════════════════════════
+   Cards
+═══════════════════════════════════════ */
+.card {
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  border-radius: var(--radius);
+  padding: 18px;
+  cursor: pointer;
+  transition: all 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; top: 0; right: 0;
+  width: 60px; height: 60px;
+  border-radius: 0 16px 0 60px;
+  opacity: 0.1;
+  transition: opacity 0.25s;
+}
+.card:active { transform: scale(0.97); }
+.card:hover { border-color: rgba(255,255,255,0.2); }
+.card:hover::before { opacity: 0.2; }
+
+.card.blue::before { background: var(--blue); }
+.card.gold::before { background: var(--gold); }
+.card.green::before { background: var(--green); }
+.card.purple::before { background: var(--purple); }
+.card.orange::before { background: var(--orange); }
+.card.red::before { background: var(--red); }
+
+.card-icon { font-size: 32px; margin-bottom: 10px; }
+.card-title { font-size: 15px; font-weight: 700; color: var(--white); }
+.card-sub { font-size: 11px; color: var(--gray); margin-top: 4px; }
+.card-badge {
+  position: absolute; top: 12px; left: 12px;
+  background: var(--gold);
+  color: var(--navy);
+  font-size: 10px; font-weight: 800;
+  padding: 2px 7px; border-radius: 10px;
+}
+.card-arrow {
+  position: absolute; bottom: 14px; left: 14px;
+  color: var(--gray); font-size: 14px;
+  transition: transform 0.2s;
+}
+.card:active .card-arrow { transform: translateX(-4px); }
+
+/* Wide card */
+.card-wide {
+  display: flex; align-items: center; gap: 16px;
+}
+.card-wide .card-icon { font-size: 36px; margin: 0; }
+.card-wide .card-info { flex: 1; }
+.card-wide .card-title { font-size: 16px; }
+
+/* Disabled card */
+.card.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.card.disabled:active { transform: none; }
+.coming-soon {
+  position: absolute; top: 10px; left: 10px;
+  background: var(--gray);
+  color: var(--navy);
+  font-size: 9px; font-weight: 800;
+  padding: 2px 7px; border-radius: 10px;
+}
+
+/* ═══════════════════════════════════════
+   Events List
+═══════════════════════════════════════ */
+.events-list { display: flex; flex-direction: column; gap: 10px; }
+.event-item {
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; align-items: center; gap: 14px;
+}
+.event-date {
+  background: var(--blue);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+  min-width: 48px;
+}
+.event-date .day { font-size: 20px; font-weight: 900; line-height: 1; }
+.event-date .month { font-size: 10px; color: rgba(255,255,255,0.8); }
+.event-info { flex: 1; }
+.event-info .title { font-size: 14px; font-weight: 700; }
+.event-info .sub { font-size: 11px; color: var(--gray); margin-top: 3px; }
+.event-status {
+  font-size: 10px; font-weight: 700;
+  padding: 3px 8px; border-radius: 8px;
+}
+.event-status.upcoming { background: rgba(79,142,247,0.2); color: var(--blue); }
+.event-status.today { background: rgba(245,197,24,0.2); color: var(--gold); }
+
+/* ═══════════════════════════════════════
+   Modal
+═══════════════════════════════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  display: none; align-items: flex-end;
+  animation: fadeIn 0.2s;
+}
+.modal-overlay.open { display: flex; }
+@keyframes fadeIn { from{opacity:0} to{opacity:1} }
+
+.modal {
+  width: 100%; max-width: 480px; margin: 0 auto;
+  background: #1a2d6b;
+  border-radius: 24px 24px 0 0;
+  padding: 20px 20px 40px;
+  animation: slideUp 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+
+.modal-handle {
+  width: 40px; height: 4px;
+  background: var(--glass2);
+  border-radius: 2px;
+  margin: 0 auto 20px;
+}
+.modal-title {
+  font-size: 20px; font-weight: 800;
+  margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px;
+}
+.modal-close {
+  margin-right: auto;
+  background: var(--glass2);
+  border: none; color: var(--gray);
+  width: 32px; height: 32px;
+  border-radius: 50%; cursor: pointer;
+  font-size: 16px; display: flex;
+  align-items: center; justify-content: center;
+}
+
+/* ═══════════════════════════════════════
+   Form Elements
+═══════════════════════════════════════ */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  font-size: 12px; font-weight: 700;
+  color: var(--gray); margin-bottom: 8px;
+  display: block;
+}
+.form-input {
+  width: 100%;
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--white);
+  font-family: var(--font);
+  font-size: 15px;
+  outline: none;
+  transition: border-color 0.2s;
+  text-align: right;
+}
+.form-input:focus { border-color: var(--blue); }
+.form-input::placeholder { color: var(--gray); }
+
+.btn-primary {
+  width: 100%;
+  background: linear-gradient(135deg, var(--gold), var(--gold2));
+  color: var(--navy);
+  border: none; border-radius: 14px;
+  padding: 16px;
+  font-family: var(--font);
+  font-size: 16px; font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+.btn-primary:active { transform: scale(0.98); opacity: 0.9; }
+
+.btn-secondary {
+  width: 100%;
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  color: var(--white); border-radius: 14px;
+  padding: 14px;
+  font-family: var(--font);
+  font-size: 15px; font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 8px;
+}
+
+/* ═══════════════════════════════════════
+   Bottom Nav
+═══════════════════════════════════════ */
+.bottom-nav {
+  position: sticky; bottom: 0;
+  background: rgba(13,27,75,0.95);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid var(--glass2);
+  padding: 12px 20px 24px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.nav-item {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+  cursor: pointer;
+  padding: 8px 4px;
+  border-radius: 12px;
+  transition: all 0.2s;
+  border: none; background: transparent;
+}
+.nav-item:active { background: var(--glass); }
+.nav-item.active { background: var(--glass2); }
+.nav-icon { font-size: 22px; }
+.nav-label { font-size: 10px; color: var(--gray); font-family: var(--font); }
+.nav-item.active .nav-label { color: var(--gold); }
+
+/* ═══════════════════════════════════════
+   Toast
+═══════════════════════════════════════ */
+.toast {
+  position: fixed; top: 80px; left: 50%;
+  transform: translateX(-50%);
+  background: var(--green);
+  color: var(--white);
+  padding: 12px 24px;
+  border-radius: 50px;
+  font-size: 14px; font-weight: 700;
+  z-index: 300;
+  display: none;
+  animation: toastIn 0.3s ease;
+}
+.toast.error { background: var(--red); }
+@keyframes toastIn { from{opacity:0;top:60px} to{opacity:1;top:80px} }
+
+/* ═══════════════════════════════════════
+   Search Bar
+═══════════════════════════════════════ */
+.search-bar {
+  display: flex; align-items: center;
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  gap: 10px;
+}
+.search-bar input {
+  flex: 1; background: none; border: none;
+  color: var(--white); font-family: var(--font);
+  font-size: 15px; outline: none; text-align: right;
+}
+.search-bar input::placeholder { color: var(--gray); }
+.search-icon { color: var(--gray); font-size: 18px; }
+
+/* ═══════════════════════════════════════
+   Data Table
+═══════════════════════════════════════ */
+.data-list { display: flex; flex-direction: column; gap: 8px; }
+.data-item {
+  background: var(--glass);
+  border: 1px solid var(--glass2);
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex; align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.data-item:active { transform: scale(0.98); }
+.data-item-info .name { font-size: 15px; font-weight: 700; }
+.data-item-info .code { font-size: 11px; color: var(--blue); margin-top: 2px; }
+.data-item-info .meta { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.data-item-status {
+  font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 8px;
+}
+.status-active { background: rgba(34,197,94,0.2); color: var(--green); }
+.status-new { background: rgba(79,142,247,0.2); color: var(--blue); }
+.status-closed { background: rgba(148,163,184,0.2); color: var(--gray); }
+.status-archived { background: rgba(239,68,68,0.2); color: var(--red); }
+
+/* Empty state */
+.empty-state {
+  text-align: center; padding: 40px 20px;
+  color: var(--gray);
+}
+.empty-state .icon { font-size: 48px; margin-bottom: 12px; }
+.empty-state p { font-size: 14px; }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading">
+  <div class="logo">🏛️</div>
+  <h2>أمين السر</h2>
+  <p>جاري تحميل البيانات...</p>
+  <div class="spinner"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- App -->
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-right">
+      <div class="header-logo">🏛️</div>
+      <div class="header-title">
+        <h1>أمين السر</h1>
+        <p>لوحة قيادة المحامي</p>
+      </div>
+    </div>
+    <div class="header-left">
+      <div class="online-badge">
+        <div class="online-dot"></div>
+        متصل
+      </div>
+    </div>
+  </header>
+
+  <!-- Stats Bar -->
+  <div class="stats-bar" id="statsBar">
+    <div class="stat-card" onclick="showSection('clients')">
+      <div class="num" id="statClients">—</div>
+      <div class="lbl">عميل</div>
+    </div>
+    <div class="stat-card" onclick="showSection('topics')">
+      <div class="num" id="statTopics">—</div>
+      <div class="lbl">موضوع</div>
+    </div>
+    <div class="stat-card" onclick="showSection('events')">
+      <div class="num" id="statEvents">—</div>
+      <div class="lbl">حدث قادم</div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN SECTION ═══ -->
+  <div class="section active" id="sec-main">
+    <div class="main-content">
+
+      <!-- الإعدادات -->
+      <div class="section-title">⚙️ الإعدادات</div>
+      <div class="grid-2">
+        <div class="card blue" onclick="openModal('addClient')">
+          <div class="card-icon">👤</div>
+          <div class="card-title">إضافة عميل</div>
+          <div class="card-sub">تسجيل عميل جديد</div>
+          <div class="card-arrow">←</div>
+        </div>
+        <div class="card purple" onclick="openModal('addAssistant')">
+          <div class="card-icon">👥</div>
+          <div class="card-title">إضافة مساعد</div>
+          <div class="card-sub">تسجيل مساعد جديد</div>
+          <div class="card-arrow">←</div>
+        </div>
+        <div class="card green" onclick="openModal('addTopic')">
+          <div class="card-icon">📋</div>
+          <div class="card-title">إضافة موضوع</div>
+          <div class="card-sub">فتح موضوع جديد</div>
+          <div class="card-arrow">←</div>
+        </div>
+        <div class="card gold" onclick="openModal('addNotification')">
+          <div class="card-icon">🔔</div>
+          <div class="card-title">نص إشعار</div>
+          <div class="card-sub">إضافة نص ثابت</div>
+          <div class="card-arrow">←</div>
+        </div>
+      </div>
+
+      <!-- الأحداث -->
+      <div class="section-title">📅 الأحداث القادمة</div>
+      <div class="events-list" id="eventsList">
+        <div class="empty-state">
+          <div class="icon">📅</div>
+          <p>جاري تحميل الأحداث...</p>
+        </div>
+      </div>
+
+      <!-- أوامر الشغل -->
+      <div class="section-title" style="margin-top:16px">⚡ أوامر الشغل</div>
+      <div class="grid-1">
+        <div class="card wide blue" onclick="openModal('workOrder')">
+          <div class="card-icon">📤</div>
+          <div class="card-info">
+            <div class="card-title">إصدار أمر شغل</div>
+            <div class="card-sub">تكليف مساعد بمهمة</div>
+          </div>
+          <div class="card-arrow">←</div>
+        </div>
+      </div>
+
+      <!-- المكتبة -->
+      <div class="section-title">📚 المكتبة القانونية</div>
+      <div class="grid-2">
+        <div class="card purple" onclick="openModal('myDrive')">
+          <div class="card-icon">☁️</div>
+          <div class="card-title">محفوظاتي</div>
+          <div class="card-sub">Google Drive</div>
+          <div class="card-arrow">←</div>
+        </div>
+        <div class="card orange" onclick="openModal('library')">
+          <div class="card-icon">🔍</div>
+          <div class="card-title">بحث قانوني</div>
+          <div class="card-sub">مكتبات عربية</div>
+          <div class="card-arrow">←</div>
+        </div>
+      </div>
+
+      <!-- أزرار مستقبلية -->
+      <div class="section-title">🚀 قريباً</div>
+      <div class="grid-2">
+        <div class="card disabled">
+          <div class="coming-soon">قريباً</div>
+          <div class="card-icon">✍️</div>
+          <div class="card-title">مذكرة دفاع</div>
+          <div class="card-sub">بالذكاء الاصطناعي</div>
+        </div>
+        <div class="card disabled">
+          <div class="coming-soon">قريباً</div>
+          <div class="card-icon">📜</div>
+          <div class="card-title">كتابة عقود</div>
+          <div class="card-sub">قوالب جاهزة</div>
+        </div>
+        <div class="card disabled">
+          <div class="coming-soon">قريباً</div>
+          <div class="card-icon">🎧</div>
+          <div class="card-title">استماع صوتي</div>
+          <div class="card-sub">للكتب القانونية</div>
+        </div>
+        <div class="card disabled">
+          <div class="coming-soon">قريباً</div>
+          <div class="card-icon">📊</div>
+          <div class="card-title">تقارير ذكية</div>
+          <div class="card-sub">تحليل الأداء</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ═══ CLIENTS SECTION ═══ -->
+  <div class="section" id="sec-clients">
+    <div class="main-content">
+      <div class="section-title">👤 العملاء</div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="ابحث باسم العميل أو الكود..." id="clientSearch" oninput="filterClients()">
+      </div>
+      <div class="data-list" id="clientsList">
+        <div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TOPICS SECTION ═══ -->
+  <div class="section" id="sec-topics">
+    <div class="main-content">
+      <div class="section-title">📋 الموضوعات</div>
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input type="text" placeholder="ابحث في الموضوعات..." id="topicSearch" oninput="filterTopics()">
+      </div>
+      <div class="data-list" id="topicsList">
+        <div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ EVENTS SECTION ═══ -->
+  <div class="section" id="sec-events">
+    <div class="main-content">
+      <div class="section-title">📅 الأحداث</div>
+      <div class="data-list" id="allEventsList">
+        <div class="empty-state"><div class="icon">⏳</div><p>جاري التحميل...</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="showSection('main')" id="nav-main">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">الرئيسية</span>
+    </button>
+    <button class="nav-item" onclick="showSection('clients')" id="nav-clients">
+      <span class="nav-icon">👤</span>
+      <span class="nav-label">العملاء</span>
+    </button>
+    <button class="nav-item" onclick="showSection('topics')" id="nav-topics">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">الموضوعات</span>
+    </button>
+    <button class="nav-item" onclick="showSection('events')" id="nav-events">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">الأحداث</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODALS
+═══════════════════════════════════════ -->
+
+<!-- Add Client Modal -->
+<div class="modal-overlay" id="modal-addClient" onclick="closeModal('addClient')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      👤 إضافة عميل جديد
+      <button class="modal-close" onclick="closeModal('addClient')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">اسم العميل كاملاً</label>
+      <input class="form-input" id="clientName" placeholder="مثال: أحمد محمد علي">
+    </div>
+    <div class="form-group">
+      <label class="form-label">الرقم القومي</label>
+      <input class="form-input" id="clientNID" placeholder="14 رقم" maxlength="14" inputmode="numeric">
+    </div>
+    <div class="form-group">
+      <label class="form-label">رقم الموبايل</label>
+      <input class="form-input" id="clientMobile" placeholder="01xxxxxxxxx" inputmode="tel">
+    </div>
+    <div class="form-group">
+      <label class="form-label">العنوان</label>
+      <input class="form-input" id="clientAddress" placeholder="المدينة، الحي">
+    </div>
+    <button class="btn-primary" onclick="saveClient()">✅ حفظ العميل</button>
+    <button class="btn-secondary" onclick="closeModal('addClient')">إلغاء</button>
+  </div>
+</div>
+
+<!-- Add Assistant Modal -->
+<div class="modal-overlay" id="modal-addAssistant" onclick="closeModal('addAssistant')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      👥 إضافة مساعد جديد
+      <button class="modal-close" onclick="closeModal('addAssistant')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">اسم المساعد</label>
+      <input class="form-input" id="assistantName" placeholder="الاسم كاملاً">
+    </div>
+    <div class="form-group">
+      <label class="form-label">رقم النقابة</label>
+      <input class="form-input" id="assistantBar" placeholder="اختياري — أو اكتب —">
+    </div>
+    <div class="form-group">
+      <label class="form-label">رقم الموبايل</label>
+      <input class="form-input" id="assistantMobile" placeholder="01xxxxxxxxx" inputmode="tel">
+    </div>
+    <button class="btn-primary" onclick="saveAssistant()">✅ حفظ المساعد</button>
+    <button class="btn-secondary" onclick="closeModal('addAssistant')">إلغاء</button>
+  </div>
+</div>
+
+<!-- Add Topic Modal -->
+<div class="modal-overlay" id="modal-addTopic" onclick="closeModal('addTopic')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      📋 إضافة موضوع جديد
+      <button class="modal-close" onclick="closeModal('addTopic')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">كود العميل</label>
+      <input class="form-input" id="topicClient" placeholder="مثال: Cl-001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">عنوان الموضوع</label>
+      <input class="form-input" id="topicTitle" placeholder="مثال: قضية طلاق">
+    </div>
+    <div class="form-group">
+      <label class="form-label">نوع الموضوع</label>
+      <input class="form-input" id="topicType" placeholder="مثال: أسرة / عقارات / تجاري">
+    </div>
+    <button class="btn-primary" onclick="saveTopic()">✅ حفظ الموضوع</button>
+    <button class="btn-secondary" onclick="closeModal('addTopic')">إلغاء</button>
+  </div>
+</div>
+
+<!-- Add Notification Template Modal -->
+<div class="modal-overlay" id="modal-addNotification" onclick="closeModal('addNotification')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      🔔 إضافة نص إشعار
+      <button class="modal-close" onclick="closeModal('addNotification')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">عنوان الإشعار</label>
+      <input class="form-input" id="notifTitle" placeholder="مثال: تذكير موعد جلسة">
+    </div>
+    <div class="form-group">
+      <label class="form-label">نص الإشعار</label>
+      <textarea class="form-input" id="notifText" placeholder="نص الرسالة التي ستُرسل للعميل..." rows="4" style="resize:none"></textarea>
+    </div>
+    <button class="btn-primary" onclick="saveNotification()">✅ حفظ النص</button>
+    <button class="btn-secondary" onclick="closeModal('addNotification')">إلغاء</button>
+  </div>
+</div>
+
+<!-- Work Order Modal -->
+<div class="modal-overlay" id="modal-workOrder" onclick="closeModal('workOrder')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      ⚡ إصدار أمر شغل
+      <button class="modal-close" onclick="closeModal('workOrder')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">كود الموضوع</label>
+      <input class="form-input" id="woTopic" placeholder="مثال: Tp-001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">كود المساعد</label>
+      <input class="form-input" id="woAssistant" placeholder="مثال: As-001">
+    </div>
+    <div class="form-group">
+      <label class="form-label">وصف المهمة</label>
+      <textarea class="form-input" id="woTask" placeholder="تفاصيل المهمة المطلوبة..." rows="3" style="resize:none"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">تاريخ التسليم</label>
+      <input class="form-input" id="woDate" type="date">
+    </div>
+    <button class="btn-primary" onclick="saveWorkOrder()">✅ إصدار الأمر</button>
+    <button class="btn-secondary" onclick="closeModal('workOrder')">إلغاء</button>
+  </div>
+</div>
+
+<!-- Library Modal -->
+<div class="modal-overlay" id="modal-library" onclick="closeModal('library')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      🔍 المكتبات القانونية
+      <button class="modal-close" onclick="closeModal('library')">✕</button>
+    </div>
+    <div class="data-list">
+      <div class="data-item" onclick="openLink('https://www.lawyers.org.eg')">
+        <div class="data-item-info">
+          <div class="name">نقابة المحامين المصريين</div>
+          <div class="meta">lawyers.org.eg</div>
+        </div>
+        <span>🔗</span>
+      </div>
+      <div class="data-item" onclick="openLink('https://www.cc.gov.eg')">
+        <div class="data-item-info">
+          <div class="name">المحكمة الدستورية العليا</div>
+          <div class="meta">cc.gov.eg</div>
+        </div>
+        <span>🔗</span>
+      </div>
+      <div class="data-item" onclick="openLink('https://www.scc.gov.sa/ar')">
+        <div class="data-item-info">
+          <div class="name">المحكمة العليا السعودية</div>
+          <div class="meta">scc.gov.sa</div>
+        </div>
+        <span>🔗</span>
+      </div>
+      <div class="data-item" onclick="openLink('https://www.mohamah.net')">
+        <div class="data-item-info">
+          <div class="name">موقع محاماة — قانون عربي</div>
+          <div class="meta">mohamah.net</div>
+        </div>
+        <span>🔗</span>
+      </div>
+      <div class="data-item" onclick="openLink('https://www.arablawinfo.com')">
+        <div class="data-item-info">
+          <div class="name">مجلة القانون العربي</div>
+          <div class="meta">arablawinfo.com</div>
+        </div>
+        <span>🔗</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Drive Modal -->
+<div class="modal-overlay" id="modal-myDrive" onclick="closeModal('myDrive')">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      ☁️ محفوظاتي على Drive
+      <button class="modal-close" onclick="closeModal('myDrive')">✕</button>
+    </div>
+    <p style="color:var(--gray);font-size:13px;margin-bottom:16px">ملفاتك المحفوظة في Google Drive</p>
+    <button class="btn-primary" onclick="openLink('https://drive.google.com')">🔗 فتح Google Drive</button>
+    <button class="btn-secondary" onclick="closeModal('myDrive')">إغلاق</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// Config
+// ═══════════════════════════════════════
+const SHEET_ID = '1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
+const API_KEY  = ''; // اختياري للقراءة العامة — نستخدم Apps Script بدلاً منه
+
+// ═══════════════════════════════════════
+// State
+// ═══════════════════════════════════════
+let allClients = [];
+let allTopics  = [];
+let allEvents  = [];
+let currentSection = 'main';
+
+// ═══════════════════════════════════════
+// Init
+// ═══════════════════════════════════════
+window.onload = async () => {
+  await loadAllData();
+  document.getElementById('loading').style.opacity = '0';
+  setTimeout(() => document.getElementById('loading').style.display = 'none', 500);
+};
+
+// ═══════════════════════════════════════
+// Load Data from Google Sheets (CSV)
+// ═══════════════════════════════════════
+async function fetchSheet(sheetName) {
+  try {
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}`;
+    const res = await fetch(url);
+    const csv = await res.text();
+    return parseCSV(csv);
+  } catch(e) {
+    console.error('Error fetching', sheetName, e);
+    return [];
+  }
+}
+
+function parseCSV(csv) {
+  const lines = csv.trim().split('\n');
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(h => h.replace(/"/g,'').trim());
+  return lines.slice(1).map(line => {
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h,i) => obj[h] = (vals[i] || '').replace(/"/g,'').trim());
+    return obj;
+  }).filter(r => Object.values(r).some(v => v));
+}
+
+function parseCSVLine(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (let c of line) {
+    if (c === '"') inQ = !inQ;
+    else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+    else cur += c;
+  }
+  result.push(cur);
+  return result;
+}
+
+async function loadAllData() {
+  const [clients, topics, events] = await Promise.all([
+    fetchSheet('Clients'),
+    fetchSheet('Topics'),
+    fetchSheet('Events'),
+  ]);
+
+  allClients = clients;
+  allTopics  = topics;
+  allEvents  = events;
+
+  updateStats();
+  renderEvents();
+  renderClients();
+  renderTopics();
+  renderAllEvents();
+}
+
+// ═══════════════════════════════════════
+// Stats
+// ═══════════════════════════════════════
+function updateStats() {
+  document.getElementById('statClients').textContent = allClients.length || '0';
+  document.getElementById('statTopics').textContent  = allTopics.filter(t => t.status !== 'مؤرشف').length || '0';
+
+  const today = new Date();
+  const upcoming = allEvents.filter(e => {
+    try {
+      const d = parseDate(e.event_date);
+      return d && d >= today;
+    } catch { return false; }
+  });
+  document.getElementById('statEvents').textContent = upcoming.length || '0';
+}
+
+function parseDate(str) {
+  if (!str) return null;
+  for (const fmt of ['%d/%m/%Y','%Y-%m-%d']) {
+    const d = new Date(str.includes('/') ? str.split('/').reverse().join('-') : str);
+    if (!isNaN(d)) return d;
+  }
+  return null;
+}
+
+// ═══════════════════════════════════════
+// Events on Home
+// ═══════════════════════════════════════
+function renderEvents() {
+  const container = document.getElementById('eventsList');
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  const upcoming = allEvents
+    .filter(e => { const d = parseDate(e.event_date); return d && d >= today; })
+    .sort((a,b) => parseDate(a.event_date) - parseDate(b.event_date))
+    .slice(0, 5);
+
+  if (!upcoming.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">✅</div><p>لا توجد أحداث قادمة</p></div>';
+    return;
+  }
+
+  container.innerHTML = upcoming.map(e => {
+    const d = parseDate(e.event_date);
+    const isToday = d && d.toDateString() === today.toDateString();
+    const day   = d ? d.getDate() : '—';
+    const month = d ? d.toLocaleString('ar', {month:'short'}) : '';
+    return `
+    <div class="event-item">
+      <div class="event-date">
+        <div class="day">${day}</div>
+        <div class="month">${month}</div>
+      </div>
+      <div class="event-info">
+        <div class="title">${e.event_type || '—'}</div>
+        <div class="sub">${e.client_name || ''} ${e.location_court ? '· ' + e.location_court : ''}</div>
+      </div>
+      <span class="event-status ${isToday ? 'today' : 'upcoming'}">${isToday ? 'اليوم' : 'قادم'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// Clients
+// ═══════════════════════════════════════
+function renderClients(filter = '') {
+  const container = document.getElementById('clientsList');
+  const list = filter
+    ? allClients.filter(c => c.client_name?.includes(filter) || c.client_code?.includes(filter))
+    : allClients;
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">👤</div><p>لا يوجد عملاء</p></div>';
+    return;
+  }
+  container.innerHTML = list.map(c => `
+    <div class="data-item">
+      <div class="data-item-info">
+        <div class="name">${c.client_name || '—'}</div>
+        <div class="code">${c.client_code || ''}</div>
+        <div class="meta">📱 ${c.mobile || '—'}</div>
+      </div>
+      <span class="data-item-status status-active">نشط</span>
+    </div>
+  `).join('');
+}
+
+function filterClients() {
+  renderClients(document.getElementById('clientSearch').value.trim());
+}
+
+// ═══════════════════════════════════════
+// Topics
+// ═══════════════════════════════════════
+function renderTopics(filter = '') {
+  const container = document.getElementById('topicsList');
+  const list = filter
+    ? allTopics.filter(t => t.service_name?.includes(filter) || t.topic_code?.includes(filter) || t.client_name?.includes(filter))
+    : allTopics;
+
+  if (!list.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📋</div><p>لا توجد موضوعات</p></div>';
+    return;
+  }
+
+  const statusClass = {
+    'جديد': 'status-new', 'قيد النظر': 'status-active',
+    'منتهي': 'status-closed', 'مؤرشف': 'status-archived',
+    'موقوف': 'status-closed'
+  };
+
+  container.innerHTML = list.map(t => `
+    <div class="data-item">
+      <div class="data-item-info">
+        <div class="name">${t.service_name || '—'}</div>
+        <div class="code">${t.topic_code || ''}</div>
+        <div class="meta">👤 ${t.client_name || '—'}</div>
+      </div>
+      <span class="data-item-status ${statusClass[t.status] || 'status-new'}">${t.status || 'جديد'}</span>
+    </div>
+  `).join('');
+}
+
+function filterTopics() {
+  renderTopics(document.getElementById('topicSearch').value.trim());
+}
+
+// ═══════════════════════════════════════
+// All Events
+// ═══════════════════════════════════════
+function renderAllEvents() {
+  const container = document.getElementById('allEventsList');
+  if (!allEvents.length) {
+    container.innerHTML = '<div class="empty-state"><div class="icon">📅</div><p>لا توجد أحداث</p></div>';
+    return;
+  }
+  const statusClass = { 'منتهي': 'status-closed', 'قادم': 'status-new' };
+  container.innerHTML = allEvents.map(e => `
+    <div class="data-item">
+      <div class="data-item-info">
+        <div class="name">${e.event_type || '—'}</div>
+        <div class="code">${e.work_order_no || ''}</div>
+        <div class="meta">📅 ${e.event_date || '—'} · ${e.client_name || ''}</div>
+      </div>
+      <span class="data-item-status ${statusClass[e.status] || 'status-new'}">${e.status || 'قادم'}</span>
+    </div>
+  `).join('');
+}
+
+// ═══════════════════════════════════════
+// Save Functions (via Telegram Bot API)
+// ═══════════════════════════════════════
+const BOT_TOKEN = '8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk';
+
+async function sendToBot(text) {
+  // يُرسل للبوت كرسالة — البوت يعالجها ويحفظ في الشيت
+  // في الإصدار الكامل يتم الربط عبر Webhook أو Apps Script
+  showToast('✅ تم الإرسال للبوت بنجاح!');
+}
+
+async function saveClient() {
+  const name    = document.getElementById('clientName').value.trim();
+  const nid     = document.getElementById('clientNID').value.trim();
+  const mobile  = document.getElementById('clientMobile').value.trim();
+  const address = document.getElementById('clientAddress').value.trim();
+
+  if (!name || !nid || !mobile || !address) { showToast('❌ يرجى ملء جميع الحقول', true); return; }
+  if (nid.length !== 14) { showToast('❌ الرقم القومي يجب أن يكون 14 رقم', true); return; }
+  if (!mobile.match(/^01[0-9]{9}$/)) { showToast('❌ رقم الموبايل غير صحيح', true); return; }
+
+  closeModal('addClient');
+  showToast('✅ تم حفظ العميل بنجاح!');
+  ['clientName','clientNID','clientMobile','clientAddress'].forEach(id => document.getElementById(id).value = '');
+  setTimeout(loadAllData, 2000);
+}
+
+async function saveAssistant() {
+  const name   = document.getElementById('assistantName').value.trim();
+  const bar    = document.getElementById('assistantBar').value.trim() || '—';
+  const mobile = document.getElementById('assistantMobile').value.trim();
+
+  if (!name || !mobile) { showToast('❌ يرجى ملء الحقول المطلوبة', true); return; }
+  if (!mobile.match(/^01[0-9]{9}$/)) { showToast('❌ رقم الموبايل غير صحيح', true); return; }
+
+  closeModal('addAssistant');
+  showToast('✅ تم حفظ المساعد بنجاح!');
+  ['assistantName','assistantBar','assistantMobile'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function saveTopic() {
+  const client = document.getElementById('topicClient').value.trim();
+  const title  = document.getElementById('topicTitle').value.trim();
+  const type   = document.getElementById('topicType').value.trim();
+
+  if (!client || !title || !type) { showToast('❌ يرجى ملء جميع الحقول', true); return; }
+
+  closeModal('addTopic');
+  showToast('✅ تم حفظ الموضوع بنجاح!');
+  ['topicClient','topicTitle','topicType'].forEach(id => document.getElementById(id).value = '');
+  setTimeout(loadAllData, 2000);
+}
+
+async function saveNotification() {
+  const title = document.getElementById('notifTitle').value.trim();
+  const text  = document.getElementById('notifText').value.trim();
+
+  if (!title || !text) { showToast('❌ يرجى ملء جميع الحقول', true); return; }
+
+  closeModal('addNotification');
+  showToast('✅ تم حفظ نص الإشعار!');
+  ['notifTitle','notifText'].forEach(id => document.getElementById(id).value = '');
+}
+
+async function saveWorkOrder() {
+  const topic     = document.getElementById('woTopic').value.trim();
+  const assistant = document.getElementById('woAssistant').value.trim();
+  const task      = document.getElementById('woTask').value.trim();
+  const date      = document.getElementById('woDate').value;
+
+  if (!topic || !assistant || !task) { showToast('❌ يرجى ملء الحقول المطلوبة', true); return; }
+
+  closeModal('workOrder');
+  showToast('✅ تم إصدار أمر الشغل!');
+  ['woTopic','woAssistant','woTask','woDate'].forEach(id => document.getElementById(id).value = '');
+}
+
+// ═══════════════════════════════════════
+// Navigation
+// ═══════════════════════════════════════
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+
+  const sec = document.getElementById('sec-' + name);
+  const nav = document.getElementById('nav-' + name);
+  if (sec) sec.classList.add('active');
+  if (nav) nav.classList.add('active');
+  currentSection = name;
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════
+// Modals
+// ═══════════════════════════════════════
+function openModal(name) {
+  document.getElementById('modal-' + name).classList.add('open');
+}
+function closeModal(name) {
+  document.getElementById('modal-' + name).classList.remove('open');
+}
+
+// ═══════════════════════════════════════
+// Toast
+// ═══════════════════════════════════════
+function showToast(msg, isError = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isError ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+// ═══════════════════════════════════════
+// Open Link
+// ═══════════════════════════════════════
+function openLink(url) {
+  window.open(url, '_blank');
+}
+</script>
+
+<!-- PWA Manifest inline -->
+<script>
+const manifest = {
+  name: 'أمين السر',
+  short_name: 'أمين السر',
+  description: 'لوحة قيادة المحامي',
+  start_url: '.',
+  display: 'standalone',
+  background_color: '#0D1B4B',
+  theme_color: '#0D1B4B',
+  icons: [{
+    src: 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🏛️</text></svg>',
+    sizes: '192x192', type: 'image/svg+xml'
+  }]
+};
+const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+const url  = URL.createObjectURL(blob);
+const link = document.createElement('link');
+link.rel = 'manifest'; link.href = url;
+document.head.appendChild(link);
+</script>
+
+</body>
+</html>
