@@ -13,9 +13,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 
 <style>
-/* ═══════════════════════════════════════
-   CSS Variables & Reset
-═══════════════════════════════════════ */
 :root {
   --navy:    #0D1B4B;
   --navy2:   #1E2761;
@@ -46,9 +43,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ═══════════════════════════════════════
-   Background
-═══════════════════════════════════════ */
 .bg {
   position: fixed; inset: 0; z-index: 0;
   background: linear-gradient(135deg, #0D1B4B 0%, #1a2d6b 50%, #0D1B4B 100%);
@@ -60,9 +54,6 @@ body {
               radial-gradient(ellipse at 80% 80%, rgba(245,197,24,0.08) 0%, transparent 60%);
 }
 
-/* ═══════════════════════════════════════
-   App Container
-═══════════════════════════════════════ */
 .app {
   position: relative; z-index: 1;
   max-width: 480px;
@@ -72,9 +63,6 @@ body {
   flex-direction: column;
 }
 
-/* ═══════════════════════════════════════
-   Loading Screen
-═══════════════════════════════════════ */
 #loading {
   position: fixed; inset: 0; z-index: 100;
   background: var(--navy);
@@ -96,9 +84,6 @@ body {
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
 
-/* ═══════════════════════════════════════
-   Header
-═══════════════════════════════════════ */
 .header {
   padding: 20px 20px 16px;
   display: flex;
@@ -128,9 +113,6 @@ body {
 }
 @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ═══════════════════════════════════════
-   Stats Bar
-═══════════════════════════════════════ */
 .stats-bar {
   padding: 16px 20px;
   display: grid;
@@ -150,9 +132,6 @@ body {
 .stat-card .num { font-size: 24px; font-weight: 900; color: var(--gold); }
 .stat-card .lbl { font-size: 10px; color: var(--gray); margin-top: 2px; }
 
-/* ═══════════════════════════════════════
-   Section
-═══════════════════════════════════════ */
 .section {
   padding: 0 20px 16px;
   display: none;
@@ -172,9 +151,6 @@ body {
   height: 1px; background: var(--glass2);
 }
 
-/* ═══════════════════════════════════════
-   Main Grid
-═══════════════════════════════════════ */
 .main-content { padding: 16px 20px; flex: 1; }
 
 .grid-2 {
@@ -185,9 +161,6 @@ body {
 }
 .grid-1 { margin-bottom: 12px; }
 
-/* ═══════════════════════════════════════
-   Cards
-═══════════════════════════════════════ */
 .card {
   background: var(--glass);
   border: 1px solid var(--glass2);
@@ -234,7 +207,6 @@ body {
 }
 .card:active .card-arrow { transform: translateX(-4px); }
 
-/* Wide card */
 .card-wide {
   display: flex; align-items: center; gap: 16px;
 }
@@ -242,7 +214,6 @@ body {
 .card-wide .card-info { flex: 1; }
 .card-wide .card-title { font-size: 16px; }
 
-/* Disabled card */
 .card.disabled {
   opacity: 0.4;
   cursor: not-allowed;
@@ -256,9 +227,6 @@ body {
   padding: 2px 7px; border-radius: 10px;
 }
 
-/* ═══════════════════════════════════════
-   Events List
-═══════════════════════════════════════ */
 .events-list { display: flex; flex-direction: column; gap: 10px; }
 .event-item {
   background: var(--glass);
@@ -286,9 +254,6 @@ body {
 .event-status.upcoming { background: rgba(79,142,247,0.2); color: var(--blue); }
 .event-status.today { background: rgba(245,197,24,0.2); color: var(--gold); }
 
-/* ═══════════════════════════════════════
-   Modal
-═══════════════════════════════════════ */
 .modal-overlay {
   position: fixed; inset: 0; z-index: 200;
   background: rgba(0,0,0,0.7);
@@ -331,9 +296,6 @@ body {
   align-items: center; justify-content: center;
 }
 
-/* ═══════════════════════════════════════
-   Form Elements
-═══════════════════════════════════════ */
 .form-group { margin-bottom: 16px; }
 .form-label {
   font-size: 12px; font-weight: 700;
@@ -383,9 +345,6 @@ body {
   margin-top: 8px;
 }
 
-/* ═══════════════════════════════════════
-   Bottom Nav
-═══════════════════════════════════════ */
 .bottom-nav {
   position: sticky; bottom: 0;
   background: rgba(13,27,75,0.95);
@@ -411,9 +370,6 @@ body {
 .nav-label { font-size: 10px; color: var(--gray); font-family: var(--font); }
 .nav-item.active .nav-label { color: var(--gold); }
 
-/* ═══════════════════════════════════════
-   Toast
-═══════════════════════════════════════ */
 .toast {
   position: fixed; top: 80px; left: 50%;
   transform: translateX(-50%);
@@ -429,9 +385,6 @@ body {
 .toast.error { background: var(--red); }
 @keyframes toastIn { from{opacity:0;top:60px} to{opacity:1;top:80px} }
 
-/* ═══════════════════════════════════════
-   Search Bar
-═══════════════════════════════════════ */
 .search-bar {
   display: flex; align-items: center;
   background: var(--glass);
@@ -449,9 +402,6 @@ body {
 .search-bar input::placeholder { color: var(--gray); }
 .search-icon { color: var(--gray); font-size: 18px; }
 
-/* ═══════════════════════════════════════
-   Data Table
-═══════════════════════════════════════ */
 .data-list { display: flex; flex-direction: column; gap: 8px; }
 .data-item {
   background: var(--glass);
@@ -476,7 +426,6 @@ body {
 .status-closed { background: rgba(148,163,184,0.2); color: var(--gray); }
 .status-archived { background: rgba(239,68,68,0.2); color: var(--red); }
 
-/* Empty state */
 .empty-state {
   text-align: center; padding: 40px 20px;
   color: var(--gray);
@@ -487,7 +436,6 @@ body {
 </head>
 <body>
 
-<!-- Loading -->
 <div id="loading">
   <div class="logo">🏛️</div>
   <h2>أمين السر</h2>
@@ -495,13 +443,10 @@ body {
   <div class="spinner"></div>
 </div>
 
-<!-- Toast -->
 <div class="toast" id="toast"></div>
 
-<!-- App -->
 <div class="app">
 
-  <!-- Header -->
   <header class="header">
     <div class="header-right">
       <div class="header-logo">🏛️</div>
@@ -518,7 +463,6 @@ body {
     </div>
   </header>
 
-  <!-- Stats Bar -->
   <div class="stats-bar" id="statsBar">
     <div class="stat-card" onclick="showSection('clients')">
       <div class="num" id="statClients">—</div>
@@ -534,11 +478,10 @@ body {
     </div>
   </div>
 
-  <!-- ═══ MAIN SECTION ═══ -->
+  <!-- MAIN SECTION -->
   <div class="section active" id="sec-main">
     <div class="main-content">
 
-      <!-- الإعدادات -->
       <div class="section-title">⚙️ الإعدادات</div>
       <div class="grid-2">
         <div class="card blue" onclick="openModal('addClient')">
@@ -567,7 +510,6 @@ body {
         </div>
       </div>
 
-      <!-- الأحداث -->
       <div class="section-title">📅 الأحداث القادمة</div>
       <div class="events-list" id="eventsList">
         <div class="empty-state">
@@ -576,7 +518,6 @@ body {
         </div>
       </div>
 
-      <!-- أوامر الشغل -->
       <div class="section-title" style="margin-top:16px">⚡ أوامر الشغل</div>
       <div class="grid-1">
         <div class="card wide blue" onclick="openModal('workOrder')">
@@ -589,7 +530,6 @@ body {
         </div>
       </div>
 
-      <!-- المكتبة -->
       <div class="section-title">📚 المكتبة القانونية</div>
       <div class="grid-2">
         <div class="card purple" onclick="openModal('myDrive')">
@@ -606,7 +546,6 @@ body {
         </div>
       </div>
 
-      <!-- أزرار مستقبلية -->
       <div class="section-title">🚀 قريباً</div>
       <div class="grid-2">
         <div class="card disabled">
@@ -638,7 +577,7 @@ body {
     </div>
   </div>
 
-  <!-- ═══ CLIENTS SECTION ═══ -->
+  <!-- CLIENTS SECTION -->
   <div class="section" id="sec-clients">
     <div class="main-content">
       <div class="section-title">👤 العملاء</div>
@@ -652,7 +591,7 @@ body {
     </div>
   </div>
 
-  <!-- ═══ TOPICS SECTION ═══ -->
+  <!-- TOPICS SECTION -->
   <div class="section" id="sec-topics">
     <div class="main-content">
       <div class="section-title">📋 الموضوعات</div>
@@ -666,7 +605,7 @@ body {
     </div>
   </div>
 
-  <!-- ═══ EVENTS SECTION ═══ -->
+  <!-- EVENTS SECTION -->
   <div class="section" id="sec-events">
     <div class="main-content">
       <div class="section-title">📅 الأحداث</div>
@@ -676,7 +615,6 @@ body {
     </div>
   </div>
 
-  <!-- Bottom Nav -->
   <nav class="bottom-nav">
     <button class="nav-item active" onclick="showSection('main')" id="nav-main">
       <span class="nav-icon">🏠</span>
@@ -698,9 +636,7 @@ body {
 
 </div>
 
-<!-- ═══════════════════════════════════════
-     MODALS
-═══════════════════════════════════════ -->
+<!-- MODALS -->
 
 <!-- Add Client Modal -->
 <div class="modal-overlay" id="modal-addClient" onclick="closeModal('addClient')">
@@ -781,7 +717,7 @@ body {
   </div>
 </div>
 
-<!-- Add Notification Template Modal -->
+<!-- Add Notification Modal -->
 <div class="modal-overlay" id="modal-addNotification" onclick="closeModal('addNotification')">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-handle"></div>
@@ -897,8 +833,8 @@ body {
 // ═══════════════════════════════════════
 // Config
 // ═══════════════════════════════════════
-const SHEET_ID = '1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
-const API_KEY  = ''; // اختياري للقراءة العامة — نستخدم Apps Script بدلاً منه
+const SHEET_ID   = '1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbZYNf7L3m2KlfOaHIJzlWq0sDpj5QLwUVZ5j07Ro_WaIgYSSAyt5s7lctl_2E6u4JRH/exec';
 
 // ═══════════════════════════════════════
 // State
@@ -992,11 +928,8 @@ function updateStats() {
 
 function parseDate(str) {
   if (!str) return null;
-  for (const fmt of ['%d/%m/%Y','%Y-%m-%d']) {
-    const d = new Date(str.includes('/') ? str.split('/').reverse().join('-') : str);
-    if (!isNaN(d)) return d;
-  }
-  return null;
+  const d = new Date(str.includes('/') ? str.split('/').reverse().join('-') : str);
+  return isNaN(d) ? null : d;
 }
 
 // ═══════════════════════════════════════
@@ -1124,16 +1057,24 @@ function renderAllEvents() {
 }
 
 // ═══════════════════════════════════════
-// Save Functions (via Telegram Bot API)
+// Helper: Post to Apps Script
 // ═══════════════════════════════════════
-const BOT_TOKEN = '8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk';
-
-async function sendToBot(text) {
-  // يُرسل للبوت كرسالة — البوت يعالجها ويحفظ في الشيت
-  // في الإصدار الكامل يتم الربط عبر Webhook أو Apps Script
-  showToast('✅ تم الإرسال للبوت بنجاح!');
+async function postToSheet(sheet, row) {
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({ sheet, row })
+    });
+    return true;
+  } catch(e) {
+    console.error('postToSheet error:', e);
+    return false;
+  }
 }
 
+// ═══════════════════════════════════════
+// Save Client ✅
+// ═══════════════════════════════════════
 async function saveClient() {
   const name    = document.getElementById('clientName').value.trim();
   const nid     = document.getElementById('clientNID').value.trim();
@@ -1145,11 +1086,16 @@ async function saveClient() {
   if (!mobile.match(/^01[0-9]{9}$/)) { showToast('❌ رقم الموبايل غير صحيح', true); return; }
 
   closeModal('addClient');
+  const now = new Date().toLocaleDateString('en-CA') + ' ' + new Date().toLocaleTimeString();
+  await postToSheet('Clients', [now, name, nid, mobile, address, new Date().toLocaleDateString('en-CA'), '']);
   showToast('✅ تم حفظ العميل بنجاح!');
   ['clientName','clientNID','clientMobile','clientAddress'].forEach(id => document.getElementById(id).value = '');
   setTimeout(loadAllData, 2000);
 }
 
+// ═══════════════════════════════════════
+// Save Assistant ✅ (محدّث)
+// ═══════════════════════════════════════
 async function saveAssistant() {
   const name   = document.getElementById('assistantName').value.trim();
   const bar    = document.getElementById('assistantBar').value.trim() || '—';
@@ -1159,10 +1105,16 @@ async function saveAssistant() {
   if (!mobile.match(/^01[0-9]{9}$/)) { showToast('❌ رقم الموبايل غير صحيح', true); return; }
 
   closeModal('addAssistant');
+  const now = new Date().toLocaleDateString('en-CA') + ' ' + new Date().toLocaleTimeString();
+  await postToSheet('Assistants', [now, name, bar, mobile, new Date().toLocaleDateString('en-CA'), '']);
   showToast('✅ تم حفظ المساعد بنجاح!');
   ['assistantName','assistantBar','assistantMobile'].forEach(id => document.getElementById(id).value = '');
+  setTimeout(loadAllData, 2000);
 }
 
+// ═══════════════════════════════════════
+// Save Topic ✅ (محدّث)
+// ═══════════════════════════════════════
 async function saveTopic() {
   const client = document.getElementById('topicClient').value.trim();
   const title  = document.getElementById('topicTitle').value.trim();
@@ -1171,11 +1123,16 @@ async function saveTopic() {
   if (!client || !title || !type) { showToast('❌ يرجى ملء جميع الحقول', true); return; }
 
   closeModal('addTopic');
+  const now = new Date().toLocaleDateString('en-CA') + ' ' + new Date().toLocaleTimeString();
+  await postToSheet('Topics', [now, client, title, type, 'جديد', new Date().toLocaleDateString('en-CA'), '']);
   showToast('✅ تم حفظ الموضوع بنجاح!');
   ['topicClient','topicTitle','topicType'].forEach(id => document.getElementById(id).value = '');
   setTimeout(loadAllData, 2000);
 }
 
+// ═══════════════════════════════════════
+// Save Notification
+// ═══════════════════════════════════════
 async function saveNotification() {
   const title = document.getElementById('notifTitle').value.trim();
   const text  = document.getElementById('notifText').value.trim();
@@ -1187,6 +1144,9 @@ async function saveNotification() {
   ['notifTitle','notifText'].forEach(id => document.getElementById(id).value = '');
 }
 
+// ═══════════════════════════════════════
+// Save Work Order
+// ═══════════════════════════════════════
 async function saveWorkOrder() {
   const topic     = document.getElementById('woTopic').value.trim();
   const assistant = document.getElementById('woAssistant').value.trim();
@@ -1244,7 +1204,7 @@ function openLink(url) {
 }
 </script>
 
-<!-- PWA Manifest inline -->
+<!-- PWA Manifest -->
 <script>
 const manifest = {
   name: 'أمين السر',
