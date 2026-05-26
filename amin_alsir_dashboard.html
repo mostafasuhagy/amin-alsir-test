@@ -1123,8 +1123,19 @@ async function saveTopic() {
   if (!client || !title || !type) { showToast('❌ يرجى ملء جميع الحقول', true); return; }
 
   closeModal('addTopic');
-  const now = new Date().toLocaleDateString('en-CA') + ' ' + new Date().toLocaleTimeString();
-  await postToSheet('Topics', [now, client, title, type, 'جديد', new Date().toLocaleDateString('en-CA'), '']);
+  const now = new Date().toLocaleDateString('en-CA');
+  await postToSheet('Topics', [
+    '',        // topic_code
+    client,    // client_code
+    '',        // client_name
+    '',        // service_code
+    title,     // service_name
+    '',        // assistant_code
+    '',        // assistant_name
+    now,       // date_opened
+    'جديد',    // status
+    type       // notes
+  ]);
   showToast('✅ تم حفظ الموضوع بنجاح!');
   ['topicClient','topicTitle','topicType'].forEach(id => document.getElementById(id).value = '');
   setTimeout(loadAllData, 2000);
