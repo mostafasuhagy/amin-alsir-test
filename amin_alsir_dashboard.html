@@ -834,7 +834,7 @@ body {
 // Config
 // ═══════════════════════════════════════
 const SHEET_ID   = '1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxnG2ZiPHn0Uw7Nz9Z9EoJZ1nRUbHhImtrhlxEVNYd2SkX0l_W3JGYLygVedw21Ofuc/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbZYNf7L3m2KlfOaHIJzlWq0sDpj5QLwUVZ5j07Ro_WaIgYSSAyt5s7lctl_2E6u4JRH/exec';
 
 // ═══════════════════════════════════════
 // State
@@ -1105,8 +1105,17 @@ async function saveAssistant() {
   if (!mobile.match(/^01[0-9]{9}$/)) { showToast('❌ رقم الموبايل غير صحيح', true); return; }
 
   closeModal('addAssistant');
-  const now = new Date().toLocaleDateString('en-CA') + ' ' + new Date().toLocaleTimeString();
-  await postToSheet('Assistants', [now, name, bar, mobile, new Date().toLocaleDateString('en-CA'), '']);
+  const now = new Date().toLocaleDateString('en-CA');
+  await postToSheet('Assistants', [
+    '',      // assistant_code
+    name,    // assistant_name
+    bar,     // bar_number
+    mobile,  // mobile
+    now,     // date_added
+    '',      // notes
+    '',      // attachments_code
+    ''       // telegram_chat_id
+  ]);
   showToast('✅ تم حفظ المساعد بنجاح!');
   ['assistantName','assistantBar','assistantMobile'].forEach(id => document.getElementById(id).value = '');
   setTimeout(loadAllData, 2000);
