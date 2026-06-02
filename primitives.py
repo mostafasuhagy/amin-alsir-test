@@ -9,7 +9,8 @@ from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
 CALENDAR_ID = "mostafa.suhagy@gmail.com"
-DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
+DRIVE_FOLDER_ID = "0AGGAp8sywzBkUk9PVA"
+IMPERSONATE_USER = "gamal@aminalserr.com"
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -47,14 +48,19 @@ def P001C():
         return None
 
 # ─────────────────────────────────────────────
-# P001D — الاتصال بـ Google Drive
+# P001D — الاتصال بـ Google Drive (مع Impersonation)
 # ─────────────────────────────────────────────
 def P001D():
     try:
         from googleapiclient.discovery import build
+        from google.oauth2.service_account import Credentials as SACredentials
         creds_json = os.environ.get("GOOGLE_CREDENTIALS")
         creds_dict = json.loads(creds_json)
-        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        creds = SACredentials.from_service_account_info(
+            creds_dict,
+            scopes=SCOPES,
+            subject=IMPERSONATE_USER
+        )
         service = build("drive", "v3", credentials=creds)
         return service
     except Exception as e:
@@ -243,7 +249,7 @@ def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
         return False
 
 # ─────────────────────────────────────────────
-# Google Drive Functions — ✅ مُعدَّلة لدعم My Drive
+# Google Drive Functions
 # ─────────────────────────────────────────────
 def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
     try:
