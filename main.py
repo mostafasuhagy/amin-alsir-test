@@ -61,6 +61,7 @@ def settings_keyboard():
         [InlineKeyboardButton("📁 موضوع جديد",   callback_data="F-004")],
         [InlineKeyboardButton("📋 موضوعات عميل", callback_data="T-002")],
         [InlineKeyboardButton("🔄 تغيير حالة موضوع", callback_data="T-003")],
+        [InlineKeyboardButton("🗄️ أرشفة موضوع",  callback_data="T-004")],
         [InlineKeyboardButton("🔙 رجوع",          callback_data="MENU-MAIN")],
     ])
 
@@ -297,6 +298,25 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
             )
 
+    # ─── RT004 أرشفة موضوع ───
+    elif routine == "RT004":
+        if step == "topic_code":
+            topic = P002("Topics", text)
+            if not topic:
+                await T002(context, chat_id, "❌ كود الموضوع غير موجود.", back_btn)
+                context.user_data.clear()
+                return
+            data["topic_code"] = text
+            data["topic_name"] = topic.get("service_name", topic.get("title", ""))
+            context.user_data["step"] = "confirm"
+            await T002(context, chat_id,
+                f"🗄️ الموضوع: *{data['topic_name']}*\n\nهل تريد أرشفة هذا الموضوع؟",
+                [
+                    [{"text": "✅ تأكيد الأرشفة", "callback_data": "ARCHIVE-CONFIRM"}],
+                    [{"text": "❌ إلغاء",          "callback_data": "MENU-MAIN"}],
+                ]
+            )
+
     # ─── RE001 إضافة حدث ───
     elif routine == "RE001":
         if step == "title":
@@ -528,7 +548,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             await N002(context, data["client_chat_id"], text)
             context.user_data.clear()
-            await T002(context, chat_id, f"✅ *تم إرسال الإشعار للعميل!*", back_btn)
+            await T002(context, chat_id, "✅ *تم إرسال الإشعار للعميل!*", back_btn)
 
     # ─── RN003 إشعار للمساعد ───
     elif routine == "RN003":
@@ -554,7 +574,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             await N003(context, data["assistant_chat_id"], text)
             context.user_data.clear()
-            await T002(context, chat_id, f"✅ *تم إرسال الإشعار للمساعد!*", back_btn)
+            await T002(context, chat_id, "✅ *تم إرسال الإشعار للمساعد!*", back_btn)
 
 # ═══════════════════════════════════════
 # Callback Router
@@ -563,6 +583,26 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
+
+    # ─── ARCHIVE تأكيد أرشفة موضوع ───
+    if data == "ARCHIVE-CONFIRM":
+        topic_code = context.user_data.get("data", {}).get("topic_code", "")
+        topic_name = context.user_data.get("data", {}).get("topic_name", "")
+        if topic_code:
+            records = P005("Topics")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(topic_code):
+                    P004("Topics", i, 6, "مؤرشف")
+                    P004("Topics", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"))
+                    break
+        context.user_data.clear()
+        await query.edit_message_text(
+            f"✅ تم أرشفة الموضوع `{topic_code}` — *{topic_name}*",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
+        )
+        await N001(context, BOSS_CHAT_ID, f"🗄️ تم أرشفة الموضوع\n🔹 الكود: {topic_code}\n📋 {topic_name}")
+        return
 
     # ─── STATUS تغيير حالة موضوع ───
     if data.startswith("STATUS-"):
@@ -592,10 +632,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
         return
-
-    # ─── EDIT steps ───
-    if context.user_data.get("routine") == "F003" and context.user_data.get("step", "").startswith("edit_"):
-        pass  # handled in text_router
 
     if data == "MENU-MAIN":
         context.user_data.clear()
