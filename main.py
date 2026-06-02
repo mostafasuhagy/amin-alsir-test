@@ -32,6 +32,7 @@ ROUTE_MAP = {
     "N-001": RN001,  # إشعار للرئيس
     "N-002": RN002,  # إشعار للعميل
     "N-003": RN003,  # إشعار للمساعد
+    "D-001": RD001,  # رفع مستند وارد
 }
 
 # ═══════════════════════════════════════
@@ -78,6 +79,7 @@ def services_keyboard():
         [InlineKeyboardButton("📦 إرسال مرفقات",     callback_data="F-007")],
         [InlineKeyboardButton("📥 استلام شحنة",      callback_data="S-002")],
         [InlineKeyboardButton("🔍 تتبع شحنة",        callback_data="S-003")],
+        [InlineKeyboardButton("📁 رفع مستند وارد",   callback_data="D-001")],
         [InlineKeyboardButton("📄 طلب مستندات",      callback_data="F-008")],
         [InlineKeyboardButton("💰 طلب عهدة مالية",  callback_data="F-009")],
         [InlineKeyboardButton("💳 تسوية عهدة",       callback_data="M-002")],
@@ -550,6 +552,25 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للعميل!*", back_btn)
 
+    # ─── RD001 رفع مستند وارد — خطوات النص ───
+    elif routine == "RD001":
+        if step == "topic_code":
+            topic = P002("Topics", text)
+            if not topic:
+                await T001(context, chat_id, "❌ كود الموضوع غير موجود:")
+                return
+            data["topic_code"] = text
+            data["topic_name"] = topic.get("service_name", topic.get("title", ""))
+            context.user_data["step"] = "doc_name"
+            await T002(context, chat_id, f"✅ الموضوع: *{data['topic_name']}*\n\n📄 أدخل *اسم المستند*:", cancel_btn)
+        elif step == "doc_name":
+            if not V001(text):
+                await T001(context, chat_id, "❌ الاسم قصير:")
+                return
+            data["doc_name"] = text
+            context.user_data["step"] = "file"
+            await T002(context, chat_id, "📎 أرسل *الملف أو الصورة* الآن:", cancel_btn)
+
     # ─── RN003 إشعار للمساعد ───
     elif routine == "RN003":
         if step == "assistant_code":
@@ -655,9 +676,97 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]])
         )
 
+# ═══════════════════════════════════════
+# File Router — استقبال الملفات والصور
+# ═══════════════════════════════════════
+async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    routine = context.user_data.get("routine")
+    step    = context.user_data.get("step")
+    if not routine or step != "file":
+        return
+
+    chat_id  = update.effective_chat.id
+    data     = context.user_data.setdefault("data", {})
+    back_btn = [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]]
+
+    # ─── RD001 رفع مستند وارد ───
+    if routine == "RD001":
+        msg = update.message
+
+        # تحديد نوع الملف
+        if msg.document:
+            file_obj  = msg.document
+            file_name = file_obj.file_name or data.get("doc_name", "document")
+            file_id   = file_obj.file_id
+        elif msg.photo:
+            file_obj  = msg.photo[-1]
+            file_name = f"{data.get('doc_name', 'photo')}.jpg"
+            file_id   = file_obj.file_id
+        else:
+            await T001(context, chat_id, "❌ أرسل ملفاً أو صورة صالحة:")
+            return
+
+        await T001(context, chat_id, "⏳ جاري رفع الملف...")
+
+        try:
+            import tempfile, os
+            # تحميل الملف من تيليجرام
+            tg_file = await context.bot.get_file(file_id)
+            suffix  = os.path.splitext(file_name)[-1] or ".bin"
+            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+                tmp_path = tmp.name
+            await tg_file.download_to_drive(tmp_path)
+
+            # رفع الملف على Drive
+            topic_code = data.get("topic_code", "GENERAL")
+            drive_link = DRV001(tmp_path, file_name, topic_code)
+            os.unlink(tmp_path)
+
+            if not drive_link:
+                await T002(context, chat_id, "❌ فشل رفع الملف على Drive.", back_btn)
+                context.user_data.clear()
+                return
+
+            # تسجيل في Sheets
+            code = G001("Doc", "Documents")
+            P003("Documents", [
+                code,
+                topic_code,
+                data.get("doc_name", file_name),
+                file_name,
+                drive_link,
+                "وارد",
+                "TRANSIT",
+                datetime.now().strftime("%Y-%m-%d %H:%M")
+            ])
+
+            context.user_data.clear()
+            await T002(context, chat_id,
+                f"✅ *تم رفع المستند!*\n\n"
+                f"🔹 الكود: `{code}`\n"
+                f"📄 الاسم: {data.get('doc_name', file_name)}\n"
+                f"📋 الموضوع: {topic_code}\n"
+                f"🔗 [فتح الملف]({drive_link})",
+                back_btn
+            )
+            await N001(context, BOSS_CHAT_ID,
+                f"📁 مستند وارد جديد\n"
+                f"🔹 الكود: {code}\n"
+                f"📄 {data.get('doc_name', file_name)}\n"
+                f"📋 الموضوع: {topic_code}\n"
+                f"🔗 {drive_link}"
+            )
+
+        except Exception as e:
+            print(f"❌ file_router RD001: {e}")
+            await T002(context, chat_id, f"❌ حدث خطأ أثناء الرفع.", back_btn)
+            context.user_data.clear()
+
+
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
+    app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
     app.run_polling(drop_pending_updates=True)
