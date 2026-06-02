@@ -8,13 +8,13 @@ from datetime import datetime
 from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
-CALENDAR_ID = "mostafa.suhagy@gmail.com"  # Google Calendar ID
-DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"  # ✅ مجلد amin_alsir_docs
+CALENDAR_ID = "mostafa.suhagy@gmail.com"
+DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
-    "https://www.googleapis.com/auth/calendar",  # ✅ Google Calendar
+    "https://www.googleapis.com/auth/calendar",
 ]
 
 # ─────────────────────────────────────────────
@@ -141,19 +141,11 @@ def V005(amount):
 # ─────────────────────────────────────────────
 # Google Calendar Functions
 # ─────────────────────────────────────────────
-
 def CAL001(title, date_str, time_str="", location="", description="", calendar_id=CALENDAR_ID):
-    """
-    إضافة حدث جديد في Google Calendar
-    date_str: DD/MM/YYYY أو YYYY-MM-DD
-    time_str: HH:MM (اختياري)
-    """
     try:
         service = P001C()
         if not service:
             return None
-
-        # تحويل التاريخ
         for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
             try:
                 date_obj = datetime.strptime(date_str.strip(), fmt)
@@ -162,8 +154,6 @@ def CAL001(title, date_str, time_str="", location="", description="", calendar_i
         else:
             print(f"❌ CAL001: تنسيق التاريخ غير صحيح: {date_str}")
             return None
-
-        # بناء الحدث
         if time_str:
             try:
                 hour, minute = time_str.strip().split(":")[:2]
@@ -171,79 +161,55 @@ def CAL001(title, date_str, time_str="", location="", description="", calendar_i
                 start_dt = date_obj.replace(hour=int(hour), minute=int(minute))
                 end_dt   = start_dt.replace(hour=int(hour)+1)
                 event = {
-                    "summary":     title,
-                    "location":    location,
-                    "description": description,
+                    "summary": title, "location": location, "description": description,
                     "start": {"dateTime": start_dt.strftime("%Y-%m-%dT%H:%M:00"), "timeZone": "Africa/Cairo"},
                     "end":   {"dateTime": end_dt.strftime("%Y-%m-%dT%H:%M:00"),   "timeZone": "Africa/Cairo"},
                 }
             except:
                 event = {
-                    "summary":     title,
-                    "location":    location,
-                    "description": description,
+                    "summary": title, "location": location, "description": description,
                     "start": {"date": date_obj.strftime("%Y-%m-%d")},
                     "end":   {"date": date_obj.strftime("%Y-%m-%d")},
                 }
         else:
             event = {
-                "summary":     title,
-                "location":    location,
-                "description": description,
+                "summary": title, "location": location, "description": description,
                 "start": {"date": date_obj.strftime("%Y-%m-%d")},
                 "end":   {"date": date_obj.strftime("%Y-%m-%d")},
             }
-
         result = service.events().insert(calendarId=calendar_id, body=event).execute()
         event_id = result.get("id")
         print(f"✅ CAL001: تم إضافة الحدث — {event_id}")
         return event_id
-
     except Exception as e:
         print(f"❌ CAL001: {e}")
         return None
 
-
 def CAL002(calendar_id=CALENDAR_ID, days_ahead=30):
-    """
-    عرض الأحداث القادمة من Google Calendar
-    """
     try:
         service = P001C()
         if not service:
             return []
-
         now = datetime.utcnow().isoformat() + "Z"
         result = service.events().list(
-            calendarId=calendar_id,
-            timeMin=now,
-            maxResults=20,
-            singleEvents=True,
-            orderBy="startTime"
+            calendarId=calendar_id, timeMin=now,
+            maxResults=20, singleEvents=True, orderBy="startTime"
         ).execute()
-
         events = result.get("items", [])
         formatted = []
         for e in events:
             start = e["start"].get("dateTime", e["start"].get("date", ""))
             formatted.append({
-                "id":          e.get("id", ""),
-                "title":       e.get("summary", "—"),
-                "start":       start,
-                "location":    e.get("location", ""),
+                "id": e.get("id", ""), "title": e.get("summary", "—"),
+                "start": start, "location": e.get("location", ""),
                 "description": e.get("description", ""),
             })
         return formatted
-
     except Exception as e:
         print(f"❌ CAL002: {e}")
         return []
 
-
 def CAL003(event_id, calendar_id=CALENDAR_ID):
-    """
-    حذف حدث من Google Calendar
-    """
     try:
         service = P001C()
         if not service:
@@ -255,12 +221,7 @@ def CAL003(event_id, calendar_id=CALENDAR_ID):
         print(f"❌ CAL003: {e}")
         return False
 
-
 def CAL004(event_id, updates, calendar_id=CALENDAR_ID):
-    """
-    تعديل حدث في Google Calendar
-    updates: dict مثل {"summary": "عنوان جديد", "location": "مكان جديد"}
-    """
     try:
         service = P001C()
         if not service:
@@ -274,11 +235,7 @@ def CAL004(event_id, updates, calendar_id=CALENDAR_ID):
         print(f"❌ CAL004: {e}")
         return False
 
-
 def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
-    """
-    تسجيل نتيجة حدث في Google Calendar (تحديث الوصف)
-    """
     try:
         return CAL004(event_id, {"description": f"النتيجة: {result_text}"}, calendar_id)
     except Exception as e:
@@ -286,17 +243,9 @@ def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
         return False
 
 # ─────────────────────────────────────────────
-# Google Drive Functions
+# Google Drive Functions — ✅ مُعدَّلة لدعم My Drive
 # ─────────────────────────────────────────────
-
 def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
-    """
-    رفع ملف إلى Google Drive داخل مجلد الموضوع
-    file_path  : المسار المحلي للملف (مؤقت)
-    file_name  : اسم الملف كما سيُحفظ في Drive
-    topic_code : كود الموضوع (يُستخدم لإنشاء مجلد فرعي)
-    يُرجع: drive_link أو None
-    """
     try:
         from googleapiclient.http import MediaFileUpload
         import mimetypes
@@ -305,35 +254,33 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         if not service:
             return None
 
-        # إنشاء أو الحصول على مجلد الموضوع داخل amin_alsir_docs
         sub_folder_id = DRV004(topic_code, folder_id)
         if not sub_folder_id:
             return None
 
-        # تحديد نوع الملف
         mime_type, _ = mimetypes.guess_type(file_name)
         if not mime_type:
             mime_type = "application/octet-stream"
 
-        # رفع الملف
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
         }
-        media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+        media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
             body=file_metadata,
             media_body=media,
-            fields="id, webViewLink"
+            fields="id, webViewLink",
+            supportsAllDrives=True
         ).execute()
 
-        file_id   = uploaded.get("id")
+        file_id    = uploaded.get("id")
         drive_link = uploaded.get("webViewLink", f"https://drive.google.com/file/d/{file_id}/view")
 
-        # منح صلاحية عرض للجميع (anyone with link)
         service.permissions().create(
             fileId=file_id,
-            body={"type": "anyone", "role": "reader"}
+            body={"type": "anyone", "role": "reader"},
+            supportsAllDrives=True
         ).execute()
 
         print(f"✅ DRV001: تم رفع الملف — {file_name} → {drive_link}")
@@ -345,35 +292,32 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
 
 
 def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
-    """
-    عرض ملفات موضوع معين من Google Drive
-    يُرجع: قائمة بالملفات [{name, link, created_time}]
-    """
     try:
         service = P001D()
         if not service:
             return []
 
-        # البحث عن مجلد الموضوع
         query = (
             f"name='{topic_code}' and "
             f"'{folder_id}' in parents and "
             f"mimeType='application/vnd.google-apps.folder' and "
             f"trashed=false"
         )
-        res = service.files().list(q=query, fields="files(id, name)").execute()
+        res = service.files().list(
+            q=query, fields="files(id, name)",
+            supportsAllDrives=True, includeItemsFromAllDrives=True
+        ).execute()
         folders = res.get("files", [])
         if not folders:
             return []
 
         sub_folder_id = folders[0]["id"]
-
-        # جلب الملفات داخل المجلد
         query2 = f"'{sub_folder_id}' in parents and trashed=false"
         res2 = service.files().list(
             q=query2,
             fields="files(id, name, webViewLink, createdTime)",
-            orderBy="createdTime desc"
+            orderBy="createdTime desc",
+            supportsAllDrives=True, includeItemsFromAllDrives=True
         ).execute()
 
         files = []
@@ -393,15 +337,11 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
 
 
 def DRV003(file_id):
-    """
-    حذف ملف من Google Drive
-    يُرجع: True / False
-    """
     try:
         service = P001D()
         if not service:
             return False
-        service.files().delete(fileId=file_id).execute()
+        service.files().delete(fileId=file_id, supportsAllDrives=True).execute()
         print(f"✅ DRV003: تم حذف الملف — {file_id}")
         return True
     except Exception as e:
@@ -410,35 +350,35 @@ def DRV003(file_id):
 
 
 def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
-    """
-    إنشاء مجلد فرعي في Drive إذا لم يكن موجوداً، أو إرجاع ID المجلد الموجود
-    يُرجع: folder_id أو None
-    """
     try:
         service = P001D()
         if not service:
             return None
 
-        # البحث عن مجلد بنفس الاسم
         query = (
             f"name='{folder_name}' and "
             f"'{parent_id}' in parents and "
             f"mimeType='application/vnd.google-apps.folder' and "
             f"trashed=false"
         )
-        res = service.files().list(q=query, fields="files(id, name)").execute()
+        res = service.files().list(
+            q=query, fields="files(id, name)",
+            supportsAllDrives=True, includeItemsFromAllDrives=True
+        ).execute()
         existing = res.get("files", [])
         if existing:
             print(f"✅ DRV004: مجلد موجود — {folder_name} ({existing[0]['id']})")
             return existing[0]["id"]
 
-        # إنشاء مجلد جديد
         folder_metadata = {
             "name":     folder_name,
             "mimeType": "application/vnd.google-apps.folder",
             "parents":  [parent_id],
         }
-        folder = service.files().create(body=folder_metadata, fields="id").execute()
+        folder = service.files().create(
+            body=folder_metadata, fields="id",
+            supportsAllDrives=True
+        ).execute()
         folder_id = folder.get("id")
         print(f"✅ DRV004: تم إنشاء مجلد — {folder_name} ({folder_id})")
         return folder_id
@@ -449,11 +389,6 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
 
 
 def DRV005(file_path, file_name, folder_id=DRIVE_FOLDER_ID):
-    """
-    رفع ملف مباشرة إلى المجلد الرئيسي (بدون مجلد موضوع)
-    مفيد للمرفقات العامة أو الشحنات
-    يُرجع: drive_link أو None
-    """
     try:
         from googleapiclient.http import MediaFileUpload
         import mimetypes
@@ -470,20 +405,21 @@ def DRV005(file_path, file_name, folder_id=DRIVE_FOLDER_ID):
             "name":    file_name,
             "parents": [folder_id],
         }
-        media = MediaFileUpload(file_path, mimetype=mime_type, resumable=True)
+        media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
             body=file_metadata,
             media_body=media,
-            fields="id, webViewLink"
+            fields="id, webViewLink",
+            supportsAllDrives=True
         ).execute()
 
         file_id    = uploaded.get("id")
         drive_link = uploaded.get("webViewLink", f"https://drive.google.com/file/d/{file_id}/view")
 
-        # منح صلاحية عرض للجميع
         service.permissions().create(
             fileId=file_id,
-            body={"type": "anyone", "role": "reader"}
+            body={"type": "anyone", "role": "reader"},
+            supportsAllDrives=True
         ).execute()
 
         print(f"✅ DRV005: تم رفع الملف — {file_name} → {drive_link}")
