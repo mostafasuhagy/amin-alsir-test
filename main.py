@@ -3,11 +3,10 @@ from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     ContextTypes, MessageHandler, filters
 )
-from telegram.error import Conflict
 from routines import *
 from primitives import *
 from datetime import datetime
-import asyncio
+import time
 
 TOKEN = "8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk"
 BOSS_CHAT_ID = 8653723225
@@ -762,9 +761,10 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
 
 # ═══════════════════════════════════════
-# Main — مع Conflict retry loop
+# Main
 # ═══════════════════════════════════════
-async def run_bot():
+if __name__ == "__main__":
+    time.sleep(5)
     app = (
         ApplicationBuilder()
         .token(TOKEN)
@@ -775,14 +775,4 @@ async def run_bot():
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
-
-    while True:
-        try:
-            await app.run_polling(drop_pending_updates=True)
-            break
-        except Conflict:
-            print("⚠️ Conflict detected — waiting 5 seconds and retrying...")
-            await asyncio.sleep(5)
-
-if __name__ == "__main__":
-    asyncio.run(run_bot())
+    app.run_polling(drop_pending_updates=True)
