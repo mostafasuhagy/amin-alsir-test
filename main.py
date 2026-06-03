@@ -403,6 +403,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✅ *تم تسجيل النتيجة!*\n\n📝 {data['result']}", back_btn)
 
     # ─── RS001 إرسال مرفقات ───
+    # أعمدة Shipments: shipment_code | topic_code | sender | receiver | send_date | file_name | file_type | pickup_location | receive_status | receive_date | notes
     elif routine == "RS001":
         if step == "topic_code":
             topic = P002("Topics", text)
@@ -418,7 +419,17 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             data["description"] = text
             code = G001("Sh", "Shipments")
-            ok = P003("Shipments", [code, data["topic_code"], data["description"], "صادر", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            ok = P003("Shipments", [
+                code,                                       # shipment_code
+                data["topic_code"],                         # topic_code
+                data["description"],                        # sender (وصف المرفقات)
+                "",                                         # receiver
+                datetime.now().strftime("%Y-%m-%d %H:%M"),  # send_date
+                "",                                         # file_name
+                "",                                         # file_type
+                "",                                         # pickup_location
+                "صادر",                                     # receive_status
+            ])
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم تسجيل الشحنة!*\n\n🔹 الكود: `{code}`\n📦 {data['description']}", back_btn)
@@ -437,13 +448,14 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Shipments")
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Shipments", i, 4, "مستلم")
-                    P004("Shipments", i, 5, datetime.now().strftime("%Y-%m-%d %H:%M"))
+                    P004("Shipments", i, 9, "مستلم")   # receive_status — العمود 9
+                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"))  # receive_date — العمود 10
                     break
             context.user_data.clear()
-            await T002(context, chat_id, f"✅ *تم تسجيل استلام الشحنة!*\n\n🔹 الكود: `{text}`\n📦 {shipment.get('description','—')}", back_btn)
+            await T002(context, chat_id, f"✅ *تم تسجيل استلام الشحنة!*\n\n🔹 الكود: `{text}`\n📦 {shipment.get('sender','—')}", back_btn)
 
     # ─── RS003 تتبع شحنة ───
+    # أعمدة: shipment_code | topic_code | sender | receiver | send_date | file_name | file_type | pickup_location | receive_status | receive_date | notes
     elif routine == "RS003":
         if step == "shipment_code":
             shipment = P002("Shipments", text)
@@ -455,9 +467,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📦 *تتبع الشحنة*\n\n"
                 f"🔹 الكود: `{text}`\n"
                 f"📋 الموضوع: {shipment.get('topic_code','—')}\n"
-                f"📝 الوصف: {shipment.get('description','—')}\n"
-                f"🔄 الحالة: {shipment.get('status','—')}\n"
-                f"📅 تاريخ الإرسال: {shipment.get('date_sent','—')}"
+                f"📝 المحتوى: {shipment.get('sender','—')}\n"
+                f"🔄 الحالة: {shipment.get('receive_status','—')}\n"
+                f"📅 تاريخ الإرسال: {shipment.get('send_date','—')}"
             )
             await T002(context, chat_id, msg, back_btn)
 
