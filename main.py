@@ -95,6 +95,13 @@ def notifications_keyboard():
     ])
 
 # ═══════════════════════════════════════
+# Post Init — مسح الـ Webhook ومنع الـ Conflict
+# ═══════════════════════════════════════
+async def post_init(application):
+    await application.bot.delete_webhook(drop_pending_updates=True)
+    print("✅ Webhook deleted — bot started clean")
+
+# ═══════════════════════════════════════
 # Start
 # ═══════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -605,7 +612,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
-    # ─── ARCHIVE تأكيد أرشفة موضوع ───
     if data == "ARCHIVE-CONFIRM":
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
         topic_name = context.user_data.get("data", {}).get("topic_name", "")
@@ -625,7 +631,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await N001(context, BOSS_CHAT_ID, f"🗄️ تم أرشفة الموضوع\n🔹 الكود: {topic_code}\n📋 {topic_name}")
         return
 
-    # ─── STATUS تغيير حالة موضوع ───
     if data.startswith("STATUS-"):
         new_status = data.replace("STATUS-", "")
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
@@ -643,7 +648,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ─── EDIT تعديل بيانات عميل ───
     if data.startswith("EDIT-"):
         field = data.replace("EDIT-", "")
         field_names = {"name": "الاسم", "mobile": "الموبايل", "address": "العنوان"}
@@ -677,7 +681,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # ═══════════════════════════════════════
-# File Router — استقبال الملفات والصور
+# File Router
 # ═══════════════════════════════════════
 async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     routine = context.user_data.get("routine")
@@ -689,11 +693,8 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data     = context.user_data.setdefault("data", {})
     back_btn = [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]]
 
-    # ─── RD001 رفع مستند وارد ───
     if routine == "RD001":
         msg = update.message
-
-        # تحديد نوع الملف
         if msg.document:
             file_obj  = msg.document
             file_name = file_obj.file_name or data.get("doc_name", "document")
@@ -710,14 +711,12 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         try:
             import tempfile, os
-            # تحميل الملف من تيليجرام
             tg_file = await context.bot.get_file(file_id)
             suffix  = os.path.splitext(file_name)[-1] or ".bin"
             with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
                 tmp_path = tmp.name
             await tg_file.download_to_drive(tmp_path)
 
-            # رفع الملف على Drive
             topic_code = data.get("topic_code", "GENERAL")
             drive_link = DRV001(tmp_path, file_name, topic_code)
             os.unlink(tmp_path)
@@ -727,16 +726,10 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
 
-            # تسجيل في Sheets
             code = G001("Doc", "Documents")
             P003("Documents", [
-                code,
-                topic_code,
-                data.get("doc_name", file_name),
-                file_name,
-                drive_link,
-                "وارد",
-                "TRANSIT",
+                code, topic_code, data.get("doc_name", file_name),
+                file_name, drive_link, "وارد", "TRANSIT",
                 datetime.now().strftime("%Y-%m-%d %H:%M")
             ])
 
@@ -750,21 +743,24 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 back_btn
             )
             await N001(context, BOSS_CHAT_ID,
-                f"📁 مستند وارد جديد\n"
-                f"🔹 الكود: {code}\n"
+                f"📁 مستند وارد جديد\n🔹 الكود: {code}\n"
                 f"📄 {data.get('doc_name', file_name)}\n"
-                f"📋 الموضوع: {topic_code}\n"
-                f"🔗 {drive_link}"
+                f"📋 الموضوع: {topic_code}\n🔗 {drive_link}"
             )
 
         except Exception as e:
             print(f"❌ file_router RD001: {e}")
-            await T002(context, chat_id, f"❌ حدث خطأ أثناء الرفع.", back_btn)
+            await T002(context, chat_id, "❌ حدث خطأ أثناء الرفع.", back_btn)
             context.user_data.clear()
 
 
 if __name__ == "__main__":
-    app = ApplicationBuilder().token(TOKEN).build()
+    app = (
+        ApplicationBuilder()
+        .token(TOKEN)
+        .post_init(post_init)
+        .build()
+    )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
