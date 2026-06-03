@@ -114,6 +114,24 @@ def G001(prefix, tab, sheet_name=SHEET_NAME):
         return f"{prefix}-001"
 
 # ─────────────────────────────────────────────
+# Notification Logger — تسجيل الإشعارات في الشيت
+# ─────────────────────────────────────────────
+def LOG_NOTIFICATION(notif_type, ref_code, name, message):
+    try:
+        code = G001("Nt", "Notifications")
+        P003("Notifications", [
+            code,
+            notif_type,
+            ref_code,
+            name,
+            message,
+            datetime.now().strftime("%Y-%m-%d %H:%M"),
+        ])
+        print(f"✅ LOG_NOTIFICATION: {code} — {notif_type} — {name}")
+    except Exception as e:
+        print(f"❌ LOG_NOTIFICATION: {e}")
+
+# ─────────────────────────────────────────────
 # Validators
 # ─────────────────────────────────────────────
 def V001(text):
@@ -487,7 +505,12 @@ async def T005(context, chat_id, text, options):
 # ─────────────────────────────────────────────
 async def N001(context, boss_chat_id, text):
     try:
-        await context.bot.send_message(chat_id=boss_chat_id, text=f"🔔 *إشعار — أمين السر*\n\n{text}", parse_mode="Markdown")
+        await context.bot.send_message(
+            chat_id=boss_chat_id,
+            text=f"🔔 *إشعار — أمين السر*\n\n{text}",
+            parse_mode="Markdown"
+        )
+        LOG_NOTIFICATION("رئيس", str(boss_chat_id), "المدير", text)
         return True
     except Exception as e:
         print(f"❌ N001: {e}")
@@ -495,7 +518,12 @@ async def N001(context, boss_chat_id, text):
 
 async def N002(context, client_chat_id, text):
     try:
-        await context.bot.send_message(chat_id=client_chat_id, text=f"📩 *رسالة من مكتب المحاماة*\n\n{text}", parse_mode="Markdown")
+        await context.bot.send_message(
+            chat_id=client_chat_id,
+            text=f"📩 *رسالة من مكتب المحاماة*\n\n{text}",
+            parse_mode="Markdown"
+        )
+        LOG_NOTIFICATION("عميل", str(client_chat_id), "عميل", text)
         return True
     except Exception as e:
         print(f"❌ N002: {e}")
@@ -503,7 +531,12 @@ async def N002(context, client_chat_id, text):
 
 async def N003(context, assistant_chat_id, text):
     try:
-        await context.bot.send_message(chat_id=assistant_chat_id, text=f"📋 *مهمة جديدة — أمين السر*\n\n{text}", parse_mode="Markdown")
+        await context.bot.send_message(
+            chat_id=assistant_chat_id,
+            text=f"📋 *مهمة جديدة — أمين السر*\n\n{text}",
+            parse_mode="Markdown"
+        )
+        LOG_NOTIFICATION("مساعد", str(assistant_chat_id), "مساعد", text)
         return True
     except Exception as e:
         print(f"❌ N003: {e}")
