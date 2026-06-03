@@ -210,6 +210,10 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ الاسم قصير:")
                 return
             data["name"] = text
+            context.user_data["step"] = "bar_number"
+            await T002(context, chat_id, "🔢 أدخل *رقم النقابة*:", cancel_btn)
+        elif step == "bar_number":
+            data["bar_number"] = text
             context.user_data["step"] = "mobile"
             await T002(context, chat_id, "📱 أدخل *رقم الموبايل*:", cancel_btn)
         elif step == "mobile":
@@ -218,10 +222,10 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
             data["mobile"] = text
             code = G001("As", "Assistants")
-            ok = P003("Assistants", [code, data["name"], data["mobile"], datetime.now().strftime("%Y-%m-%d %H:%M")])
+            ok = P003("Assistants", [code, data["name"], data["bar_number"], data["mobile"], datetime.now().strftime("%Y-%m-%d %H:%M")])
             context.user_data.clear()
             if ok:
-                await T002(context, chat_id, f"✅ *تم إضافة المساعد!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n📱 {data['mobile']}", back_btn)
+                await T002(context, chat_id, f"✅ *تم إضافة المساعد!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n🔢 {data['bar_number']}\n📱 {data['mobile']}", back_btn)
                 await N001(context, BOSS_CHAT_ID, f"👥 مساعد جديد: {data['name']}\n🔹 الكود: {code}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
@@ -238,6 +242,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"👥 *بيانات المساعد*\n\n"
                 f"🔹 الكود: `{assistant.get('assistant_code', text)}`\n"
                 f"👤 الاسم: {assistant.get('assistant_name', '—')}\n"
+                f"🔢 رقم النقابة: {assistant.get('bar_number', '—')}\n"
                 f"📱 الموبايل: {assistant.get('mobile', '—')}\n"
                 f"📅 تاريخ التسجيل: {assistant.get('date_added', '—')}"
             )
@@ -559,7 +564,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للعميل!*", back_btn)
 
-    # ─── RD001 رفع مستند وارد — خطوات النص ───
+    # ─── RD001 رفع مستند وارد ───
     elif routine == "RD001":
         if step == "topic_code":
             topic = P002("Topics", text)
