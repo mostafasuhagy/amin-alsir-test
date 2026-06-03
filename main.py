@@ -58,6 +58,7 @@ def settings_keyboard():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👤 عميل جديد",    callback_data="F-001")],
         [InlineKeyboardButton("🔍 عرض عميل",     callback_data="F-002")],
+        [InlineKeyboardButton("✏️ تعديل عميل",   callback_data="F-003")],
         [InlineKeyboardButton("🤝 مساعد جديد",   callback_data="A-001")],
         [InlineKeyboardButton("👤 عرض مساعد",    callback_data="A-002")],
         [InlineKeyboardButton("📁 موضوع جديد",   callback_data="F-004")],
