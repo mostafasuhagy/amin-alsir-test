@@ -10,12 +10,117 @@ from google.oauth2.service_account import Credentials
 SHEET_NAME = "amin_alsir_cases_new_V2"
 CALENDAR_ID = "mostafa.suhagy@gmail.com"
 DRIVE_FOLDER_ID = "0AGGAp8sywzBkUk9PVA"
+TENANTS_SHEET = "amin_alsir_tenants"
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive",
     "https://www.googleapis.com/auth/calendar",
 ]
+
+# ─────────────────────────────────────────────
+# المناطق الزمنية للدول العربية
+# ─────────────────────────────────────────────
+ARAB_TIMEZONES = {
+    "مصر":       "Africa/Cairo",
+    "السعودية":  "Asia/Riyadh",
+    "الإمارات":  "Asia/Dubai",
+    "الكويت":    "Asia/Kuwait",
+    "قطر":       "Asia/Qatar",
+    "البحرين":   "Asia/Bahrain",
+    "الأردن":    "Asia/Amman",
+    "لبنان":     "Asia/Beirut",
+    "المغرب":    "Africa/Casablanca",
+    "تونس":      "Africa/Tunis",
+    "الجزائر":   "Africa/Algiers",
+    "ليبيا":     "Africa/Tripoli",
+    "العراق":    "Asia/Baghdad",
+    "سوريا":     "Asia/Damascus",
+    "اليمن":     "Asia/Aden",
+    "عمان":      "Asia/Muscat",
+    "السودان":   "Africa/Khartoum",
+    "فلسطين":   "Asia/Gaza",
+}
+
+def GET_TIMEZONE(country):
+    """إرجاع الـ timezone الصحيح بناءً على الدولة"""
+    return ARAB_TIMEZONES.get(country, "Africa/Cairo")
+
+def NOW_LOCAL(country="مصر"):
+    """إرجاع الوقت الحالي بتوقيت الدولة المحددة"""
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(GET_TIMEZONE(country))
+        return datetime.now(tz).strftime("%Y-%m-%d %H:%M")
+    except Exception:
+        return datetime.now().strftime("%Y-%m-%d %H:%M")
+
+# ─────────────────────────────────────────────
+# Multi-Tenant — إدارة المشتركين
+# ─────────────────────────────────────────────
+def MT001(chat_id):
+    """جلب بيانات المكتب بناءً على الـ chat_id"""
+    try:
+        tenant = P002("Tenants", str(chat_id), TENANTS_SHEET)
+        return tenant
+    except Exception as e:
+        print(f"❌ MT001: {e}")
+        return None
+
+def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id=""):
+    """تسجيل مكتب جديد في قاعدة بيانات المشتركين"""
+    try:
+        code = G001("Of", "Tenants", TENANTS_SHEET)
+        ok = P003("Tenants", [
+            code,
+            str(chat_id),
+            office_name,
+            country,
+            GET_TIMEZONE(country),
+            str(boss_chat_id),
+            sheet_name,
+            drive_folder_id,
+            "active",
+            NOW_LOCAL(country),
+        ], TENANTS_SHEET)
+        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country})")
+        return code if ok else None
+    except Exception as e:
+        print(f"❌ MT002: {e}")
+        return None
+
+def MT003(chat_id):
+    """التحقق من أن المكتب مشترك ونشط"""
+    try:
+        tenant = MT001(chat_id)
+        if not tenant:
+            return False
+        return tenant.get("status", "") == "active"
+    except Exception as e:
+        print(f"❌ MT003: {e}")
+        return False
+
+def MT004(chat_id):
+    """جلب اسم الشيت الخاص بالمكتب"""
+    try:
+        tenant = MT001(chat_id)
+        if not tenant:
+            return SHEET_NAME
+        return tenant.get("sheet_name", SHEET_NAME)
+    except Exception as e:
+        print(f"❌ MT004: {e}")
+        return SHEET_NAME
+
+def MT005(chat_id):
+    """جلب الـ timezone الخاص بالمكتب"""
+    try:
+        tenant = MT001(chat_id)
+        if not tenant:
+            return "Africa/Cairo"
+        return tenant.get("timezone", "Africa/Cairo")
+    except Exception as e:
+        print(f"❌ MT005: {e}")
+        return "Africa/Cairo"
 
 # ─────────────────────────────────────────────
 # P001 — الاتصال بـ Google Sheets
