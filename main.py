@@ -105,6 +105,7 @@ async def post_init(application):
 # Start
 # ═══════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    print(f"🆔 CHAT ID: {update.effective_chat.id}")
     await update.message.reply_text(
         "أهلاً بك في *أمين السر* 🏛️\n\nاختر من لوحة القيادة:",
         parse_mode="Markdown",
