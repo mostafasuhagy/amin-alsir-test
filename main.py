@@ -206,6 +206,46 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
             )
 
+        elif step == "edit_name":
+            if not V001(text):
+                await T001(context, chat_id, "❌ الاسم قصير:")
+                return
+            client_code = data.get("client_code")
+            records = P005("Clients")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(client_code):
+                    P004("Clients", i, 2, text)
+                    break
+            context.user_data.clear()
+            await T002(context, chat_id, f"✅ *تم تعديل الاسم!*\n\n👤 {text}", back_btn)
+            await N001(context, BOSS_CHAT_ID, f"✏️ تعديل عميل {client_code}\n👤 الاسم الجديد: {text}")
+        elif step == "edit_mobile":
+            if not V003(text):
+                await T001(context, chat_id, "❌ رقم الموبايل غير صحيح:")
+                return
+            client_code = data.get("client_code")
+            records = P005("Clients")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(client_code):
+                    P004("Clients", i, 4, text)
+                    break
+            context.user_data.clear()
+            await T002(context, chat_id, f"✅ *تم تعديل الموبايل!*\n\n📱 {text}", back_btn)
+            await N001(context, BOSS_CHAT_ID, f"✏️ تعديل عميل {client_code}\n📱 الموبايل الجديد: {text}")
+        elif step == "edit_address":
+            if not V001(text):
+                await T001(context, chat_id, "❌ العنوان قصير:")
+                return
+            client_code = data.get("client_code")
+            records = P005("Clients")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(client_code):
+                    P004("Clients", i, 5, text)
+                    break
+            context.user_data.clear()
+            await T002(context, chat_id, f"✅ *تم تعديل العنوان!*\n\n🏠 {text}", back_btn)
+            await N001(context, BOSS_CHAT_ID, f"✏️ تعديل عميل {client_code}\n🏠 العنوان الجديد: {text}")
+
     # ─── RA001 إضافة مساعد ───
     elif routine == "RA001":
         if step == "name":
