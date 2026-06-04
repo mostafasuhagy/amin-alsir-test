@@ -61,8 +61,11 @@ def NOW_LOCAL(country="مصر"):
 def MT001(chat_id):
     """جلب بيانات المكتب بناءً على الـ chat_id"""
     try:
-        tenant = P002("Tenants", str(chat_id), TENANTS_SHEET)
-        return tenant
+        records = P005("Tenants", TENANTS_SHEET)
+        for r in records:
+            if str(r.get("chat_id", "")) == str(chat_id):
+                return r
+        return None
     except Exception as e:
         print(f"❌ MT001: {e}")
         return None
