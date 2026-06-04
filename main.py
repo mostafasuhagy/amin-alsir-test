@@ -104,15 +104,41 @@ async def post_init(application):
     print("✅ Webhook deleted — bot started clean")
 
 # ═══════════════════════════════════════
-# Start
+# Start — مع دعم Multi-tenant
 # ═══════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"🆔 CHAT ID: {update.effective_chat.id}")
-    await update.message.reply_text(
-        "أهلاً بك في *أمين السر* 🏛️\n\nاختر من لوحة القيادة:",
-        parse_mode="Markdown",
-        reply_markup=main_keyboard()
-    )
+    chat_id = update.effective_chat.id
+    print(f"🆔 CHAT ID: {chat_id}")
+
+    # ── التحقق من الاشتراك ──
+    tenant = MT001(chat_id)
+
+    if tenant and tenant.get("status") == "active":
+        # مكتب مشترك — فتح الداشبورد
+        office_name = tenant.get("office_name", "المكتب")
+        country = tenant.get("country", "مصر")
+        context.user_data["tenant"] = tenant
+        await update.message.reply_text(
+            f"أهلاً بك في *أمين السر* 🏛️\n\n"
+            f"🏢 {office_name}\n"
+            f"🌍 {country}\n\n"
+            f"اختر من لوحة القيادة:",
+            parse_mode="Markdown",
+            reply_markup=main_keyboard()
+        )
+    else:
+        # غير مشترك — رسالة الاشتراك
+        await update.message.reply_text(
+            "🏛️ *أمين السر — Amin Al Serr*\n\n"
+            "نظام إدارة مكتب المحاماة عبر تيليجرام\n\n"
+            "⚠️ أنت غير مشترك في الخدمة.\n\n"
+            "للاشتراك وتفعيل الحساب:\n"
+            "📩 تواصل معنا على تيليجرام",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📩 تواصل معنا للاشتراك", url="https://t.me/8653723225")],
+            ])
+        )
 
 # ═══════════════════════════════════════
 # Text Router
