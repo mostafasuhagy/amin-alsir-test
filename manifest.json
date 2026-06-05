@@ -1,0 +1,23 @@
+{
+  "name": "أمين السر",
+  "short_name": "أمين السر",
+  "description": "لوحة قيادة المحامي",
+  "start_url": "./amin_alsir_dashboard.html",
+  "display": "standalone",
+  "background_color": "#FFE600",
+  "theme_color": "#FFE600",
+  "icons": [
+    {
+      "src": "./amin_alsir_icon_yellow2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./amin_alsir_icon_yellow2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
