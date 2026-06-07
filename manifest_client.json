@@ -1,6 +1,6 @@
 {
-  "name": "أمين السر — عميل",
-  "short_name": "عميل أمين السر",
+  "name": "أمين السر — لوحة العميل",
+  "short_name": "لوحة العميل",
   "display": "standalone",
   "background_color": "#FFE600",
   "theme_color": "#FFE600",

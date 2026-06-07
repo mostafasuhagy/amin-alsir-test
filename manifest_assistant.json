@@ -1,6 +1,6 @@
 {
-  "name": "أمين السر — مساعد",
-  "short_name": "مساعد أمين السر",
+  "name": "أمين السر — لوحة المساعد",
+  "short_name": "لوحة المساعد",
   "display": "standalone",
   "background_color": "#FFE600",
   "theme_color": "#FFE600",
