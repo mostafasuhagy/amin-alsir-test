@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Icon Generator - Amin AlSir</title>
+<style>
+  body { background: #222; display: flex; flex-direction: column; align-items: center; padding: 40px; gap: 30px; font-family: Arial; color: white; }
+  canvas { display: none; }
+  .preview { display: flex; gap: 40px; margin-bottom: 20px; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  img { border: 2px solid #555; }
+  button { background: #FFE600; color: #000; border: none; padding: 12px 24px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; margin-top: 10px; }
+  button:hover { background: #e6cf00; }
+  h2 { color: #FFE600; margin: 0; }
+</style>
+</head>
+<body>
+
+<h2>🏛️ أمين السر — مولد الأيقونات</h2>
+
+<div class="preview">
+  <div class="item">
+    <p>العميل (قطع يسار)</p>
+    <img id="prev-client" width="192" height="192" />
+    <button onclick="download('client')">⬇ تحميل أيقونة العميل</button>
+  </div>
+  <div class="item">
+    <p>المساعد (قطع يمين)</p>
+    <img id="prev-assistant" width="192" height="192" />
+    <button onclick="download('assistant')">⬇ تحميل أيقونة المساعد</button>
+  </div>
+</div>
+
+<canvas id="canvas-client" width="512" height="512"></canvas>
+<canvas id="canvas-assistant" width="512" height="512"></canvas>
+
+<script>
+const logoSrc = 'amin_alsir_icon_yellow2.png';
+const CUT = 140;
+const SIZE = 512;
+
+function drawIcon(canvasId, cutSide) {
+  const canvas = document.getElementById(canvasId);
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  img.onload = function() {
+    ctx.clearRect(0, 0, SIZE, SIZE);
+    ctx.beginPath();
+    if (cutSide === 'left') {
+      ctx.moveTo(CUT, 0);
+      ctx.lineTo(SIZE, 0);
+      ctx.lineTo(SIZE, SIZE);
+      ctx.lineTo(0, SIZE);
+      ctx.lineTo(0, CUT);
+      ctx.closePath();
+    } else {
+      ctx.moveTo(0, 0);
+      ctx.lineTo(SIZE - CUT, 0);
+      ctx.lineTo(SIZE, CUT);
+      ctx.lineTo(SIZE, SIZE);
+      ctx.lineTo(0, SIZE);
+      ctx.closePath();
+    }
+    ctx.fillStyle = '#FFE600';
+    ctx.fill();
+    ctx.save();
+    ctx.clip();
+    ctx.drawImage(img, 0, 0, SIZE, SIZE);
+    ctx.restore();
+    const previewId = canvasId === 'canvas-client' ? 'prev-client' : 'prev-assistant';
+    document.getElementById(previewId).src = canvas.toDataURL('image/png');
+  };
+  img.onerror = function() {
+    alert('تأكد إن ملف amin_alsir_icon_yellow2.png موجود في نفس المجلد');
+  };
+  img.src = logoSrc;
+}
+
+function download(type) {
+  const canvasId = type === 'client' ? 'canvas-client' : 'canvas-assistant';
+  const canvas = document.getElementById(canvasId);
+  const link = document.createElement('a');
+  link.download = type === 'client' ? 'icon_client.png' : 'icon_assistant.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+drawIcon('canvas-client', 'left');
+drawIcon('canvas-assistant', 'right');
+</script>
+</body>
+</html>
