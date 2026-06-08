@@ -176,7 +176,7 @@ def P002(tab, ref_code, sheet_name=SHEET_NAME):
     try:
         ws = P001(sheet_name).worksheet(tab)
         for r in ws.get_all_records():
-            if str(list(r.values())[0]) == str(ref_code):
+            if str(list(r.values())[0]).strip().lower() == str(ref_code).strip().lower():
                 return r
         return None
     except Exception as e:
@@ -208,7 +208,7 @@ def P005(tab, sheet_name=SHEET_NAME):
 
 def P006(tab, col_name, value, sheet_name=SHEET_NAME):
     try:
-        return [r for r in P005(tab, sheet_name) if str(r.get(col_name, "")) == str(value)]
+        return [r for r in P005(tab, sheet_name) if str(r.get(col_name, "")).strip().lower() == str(value).strip().lower()]
     except Exception as e:
         print(f"❌ P006: {e}")
         return []
