@@ -34,6 +34,10 @@ ROUTE_MAP = {
     "N-002": RN002,  # إشعار للعميل
     "N-003": RN003,  # إشعار للمساعد
     "D-001": RD001,  # رفع مستند وارد
+    "D-003": RD003,  # الموافقة على مستند
+    "D-004": RD004,  # رفض مستند
+    "D-005": RD005,  # عرض مستندات موضوع
+    "D-006": RD006,  # أرشفة مستندات
 }
 
 # ═══════════════════════════════════════
@@ -82,6 +86,10 @@ def services_keyboard():
         [InlineKeyboardButton("📥 استلام شحنة",      callback_data="S-002")],
         [InlineKeyboardButton("🔍 تتبع شحنة",        callback_data="S-003")],
         [InlineKeyboardButton("📁 رفع مستند وارد",   callback_data="D-001")],
+        [InlineKeyboardButton("✅ موافقة على مستند", callback_data="D-003")],
+        [InlineKeyboardButton("❌ رفض مستند",        callback_data="D-004")],
+        [InlineKeyboardButton("📂 عرض مستندات",      callback_data="D-005")],
+        [InlineKeyboardButton("🗄️ أرشفة مستندات",   callback_data="D-006")],
         [InlineKeyboardButton("📄 طلب مستندات",      callback_data="F-008")],
         [InlineKeyboardButton("💰 طلب عهدة مالية",  callback_data="F-009")],
         [InlineKeyboardButton("💳 تسوية عهدة",       callback_data="M-002")],
@@ -231,7 +239,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     [{"text": "❌ إلغاء", "callback_data": "MENU-MAIN"}],
                 ]
             )
-
         elif step == "edit_name":
             if not V001(text):
                 await T001(context, chat_id, "❌ الاسم قصير:")
@@ -470,7 +477,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✅ *تم تسجيل النتيجة!*\n\n📝 {data['result']}", back_btn)
 
     # ─── RS001 إرسال مرفقات ───
-    # أعمدة Shipments: shipment_code | topic_code | sender | receiver | send_date | file_name | file_type | pickup_location | receive_status | receive_date | notes
     elif routine == "RS001":
         if step == "topic_code":
             topic = P002("Topics", text)
@@ -487,15 +493,15 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["description"] = text
             code = G001("Sh", "Shipments")
             ok = P003("Shipments", [
-                code,                                       # shipment_code
-                data["topic_code"],                         # topic_code
-                data["description"],                        # sender (وصف المرفقات)
-                "",                                         # receiver
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # send_date
-                "",                                         # file_name
-                "",                                         # file_type
-                "",                                         # pickup_location
-                "صادر",                                     # receive_status
+                code,
+                data["topic_code"],
+                data["description"],
+                "",
+                datetime.now().strftime("%Y-%m-%d %H:%M"),
+                "",
+                "",
+                "",
+                "صادر",
             ])
             context.user_data.clear()
             if ok:
@@ -515,14 +521,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Shipments")
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Shipments", i, 9, "مستلم")   # receive_status — العمود 9
-                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"))  # receive_date — العمود 10
+                    P004("Shipments", i, 9, "مستلم")
+                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"))
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل استلام الشحنة!*\n\n🔹 الكود: `{text}`\n📦 {shipment.get('sender','—')}", back_btn)
 
     # ─── RS003 تتبع شحنة ───
-    # أعمدة: shipment_code | topic_code | sender | receiver | send_date | file_name | file_type | pickup_location | receive_status | receive_date | notes
     elif routine == "RS003":
         if step == "shipment_code":
             shipment = P002("Shipments", text)
@@ -561,6 +566,87 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T002(context, chat_id, f"✅ *تم تسجيل الطلب!*\n\n🔹 الكود: `{code}`\n📄 من: {data['entity']}", back_btn)
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
+
+    # ─── RD003 الموافقة على مستند ───
+    elif routine == "RD003":
+        if step == "doc_code":
+            doc = P002("Documents", text)
+            if not doc:
+                await T002(context, chat_id, "❌ كود المستند غير موجود.", back_btn)
+                context.user_data.clear()
+                return
+            records = P005("Documents")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(text):
+                    P004("Documents", i, 6, "موافق عليه")
+                    break
+            context.user_data.clear()
+            await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
+            await N001(context, BOSS_CHAT_ID, f"✅ موافقة على مستند\n🔹 الكود: {text}\n📄 {doc.get('doc_name','—')}")
+
+    # ─── RD004 رفض مستند ───
+    elif routine == "RD004":
+        if step == "doc_code":
+            doc = P002("Documents", text)
+            if not doc:
+                await T002(context, chat_id, "❌ كود المستند غير موجود.", back_btn)
+                context.user_data.clear()
+                return
+            data["doc_code"] = text
+            data["doc_name"] = doc.get("doc_name", "—")
+            context.user_data["step"] = "reason"
+            await T002(context, chat_id, f"📄 المستند: *{data['doc_name']}*\n\n📝 أدخل *سبب الرفض*:", cancel_btn)
+        elif step == "reason":
+            if not V001(text):
+                await T001(context, chat_id, "❌ السبب قصير:")
+                return
+            records = P005("Documents")
+            for i, r in enumerate(records, start=2):
+                if str(list(r.values())[0]) == str(data["doc_code"]):
+                    P004("Documents", i, 6, "مرفوض")
+                    P004("Documents", i, 7, text)
+                    break
+            context.user_data.clear()
+            await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n🔹 الكود: `{data['doc_code']}`\n📝 السبب: {text}", back_btn)
+            await N001(context, BOSS_CHAT_ID, f"❌ رفض مستند\n🔹 الكود: {data['doc_code']}\n📝 السبب: {text}")
+
+    # ─── RD005 عرض مستندات موضوع ───
+    elif routine == "RD005":
+        if step == "topic_code":
+            docs = P006("Documents", "topic_code", text)
+            context.user_data.clear()
+            if not docs:
+                await T002(context, chat_id, "❌ لا توجد مستندات لهذا الموضوع.", back_btn)
+                return
+            msg = f"📁 *مستندات الموضوع* `{text}`:\n\n"
+            for d in docs:
+                link = d.get("drive_link", "")
+                name = d.get("doc_name", "—")
+                status = d.get("status", "—")
+                if link:
+                    msg += f"🔹 [{name}]({link}) — {status}\n"
+                else:
+                    msg += f"🔹 {name} — {status}\n"
+            await T002(context, chat_id, msg, back_btn)
+
+    # ─── RD006 أرشفة مستندات ───
+    elif routine == "RD006":
+        if step == "topic_code":
+            docs = P006("Documents", "topic_code", text)
+            if not docs:
+                await T002(context, chat_id, "❌ لا توجد مستندات لهذا الموضوع.", back_btn)
+                context.user_data.clear()
+                return
+            data["topic_code"] = text
+            data["doc_count"] = len(docs)
+            context.user_data["step"] = "confirm"
+            await T002(context, chat_id,
+                f"🗄️ الموضوع: `{text}`\n📄 عدد المستندات: {len(docs)}\n\nهل تريد أرشفة كل المستندات؟",
+                [
+                    [{"text": "✅ تأكيد الأرشفة", "callback_data": "ARCHIVE-DOCS-CONFIRM"}],
+                    [{"text": "❌ إلغاء",          "callback_data": "MENU-MAIN"}],
+                ]
+            )
 
     # ─── RM001 طلب عهدة ───
     elif routine == "RM001":
@@ -645,25 +731,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للعميل!*", back_btn)
 
-    # ─── RD001 رفع مستند وارد ───
-    elif routine == "RD001":
-        if step == "topic_code":
-            topic = P002("Topics", text)
-            if not topic:
-                await T001(context, chat_id, "❌ كود الموضوع غير موجود:")
-                return
-            data["topic_code"] = text
-            data["topic_name"] = topic.get("service_name", topic.get("title", ""))
-            context.user_data["step"] = "doc_name"
-            await T002(context, chat_id, f"✅ الموضوع: *{data['topic_name']}*\n\n📄 أدخل *اسم المستند*:", cancel_btn)
-        elif step == "doc_name":
-            if not V001(text):
-                await T001(context, chat_id, "❌ الاسم قصير:")
-                return
-            data["doc_name"] = text
-            context.user_data["step"] = "file"
-            await T002(context, chat_id, "📎 أرسل *الملف أو الصورة* الآن:", cancel_btn)
-
     # ─── RN003 إشعار للمساعد ───
     elif routine == "RN003":
         if step == "assistant_code":
@@ -690,6 +757,25 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للمساعد!*", back_btn)
 
+    # ─── RD001 رفع مستند وارد ───
+    elif routine == "RD001":
+        if step == "topic_code":
+            topic = P002("Topics", text)
+            if not topic:
+                await T001(context, chat_id, "❌ كود الموضوع غير موجود:")
+                return
+            data["topic_code"] = text
+            data["topic_name"] = topic.get("service_name", topic.get("title", ""))
+            context.user_data["step"] = "doc_name"
+            await T002(context, chat_id, f"✅ الموضوع: *{data['topic_name']}*\n\n📄 أدخل *اسم المستند*:", cancel_btn)
+        elif step == "doc_name":
+            if not V001(text):
+                await T001(context, chat_id, "❌ الاسم قصير:")
+                return
+            data["doc_name"] = text
+            context.user_data["step"] = "file"
+            await T002(context, chat_id, "📎 أرسل *الملف أو الصورة* الآن:", cancel_btn)
+
 # ═══════════════════════════════════════
 # Callback Router
 # ═══════════════════════════════════════
@@ -698,6 +784,24 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     data = query.data
 
+    # ─── أرشفة مستندات موضوع ───
+    if data == "ARCHIVE-DOCS-CONFIRM":
+        topic_code = context.user_data.get("data", {}).get("topic_code", "")
+        if topic_code:
+            records = P005("Documents")
+            for i, r in enumerate(records, start=2):
+                if str(r.get("topic_code", "")) == str(topic_code):
+                    P004("Documents", i, 6, "مؤرشف")
+        context.user_data.clear()
+        await query.edit_message_text(
+            f"✅ تم أرشفة مستندات الموضوع `{topic_code}`",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
+        )
+        await N001(context, BOSS_CHAT_ID, f"🗄️ تم أرشفة مستندات الموضوع: {topic_code}")
+        return
+
+    # ─── أرشفة موضوع ───
     if data == "ARCHIVE-CONFIRM":
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
         topic_name = context.user_data.get("data", {}).get("topic_name", "")
