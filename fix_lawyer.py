@@ -4,9 +4,7 @@ import base64, io, re
 logo = Image.open('amin_alsir_icon_yellow2.png').convert('RGBA')
 
 size = 512
-img = Image.new('RGBA', (size, size), (0,0,0,0))
-draw = ImageDraw.Draw(img)
-draw.ellipse([0,0,size,size], fill=(255,230,0,255))
+img = Image.new('RGBA', (size, size), (255, 230, 0, 255))
 logo_size = int(size * 0.82)
 logo_resized = logo.resize((logo_size, logo_size), Image.LANCZOS)
 offset = (size - logo_size) // 2
