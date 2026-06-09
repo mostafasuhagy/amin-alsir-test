@@ -118,6 +118,63 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     print(f"🆔 CHAT ID: {chat_id}")
 
+    # ── التحقق من Deep Link (تسجيل عميل أو مساعد) ──
+    args = context.args
+    if args:
+        param = args[0]  # مثال: client_CL-004 أو assistant_As-008
+
+        # ── تسجيل عميل ──
+        if param.startswith("client_"):
+            ref_code = param.replace("client_", "")
+            client = P002("Clients", ref_code)
+            if client:
+                # حفظ Chat ID في شيت Clients
+                records = P005("Clients")
+                for i, r in enumerate(records, start=2):
+                    if str(list(r.values())[0]).strip().lower() == str(ref_code).strip().lower():
+                        P004("Clients", i, 8, str(chat_id))  # عمود H = telegram_chat_id
+                        break
+                await update.message.reply_text(
+                    f"✅ *تم ربط حسابك بنجاح!*\n\n"
+                    f"👤 {client.get('client_name', '')}\n"
+                    f"🔹 الكود: `{ref_code}`\n\n"
+                    f"ستصلك إشعارات مكتب المحاماة هنا مباشرة.",
+                    parse_mode="Markdown"
+                )
+                await N001(context, BOSS_CHAT_ID, f"📱 عميل ربط حسابه بالبوت\n👤 {client.get('client_name','')}\n🔹 {ref_code}")
+            else:
+                await update.message.reply_text(
+                    "❌ كود العميل غير صحيح. تواصل مع المكتب.",
+                    parse_mode="Markdown"
+                )
+            return
+
+        # ── تسجيل مساعد ──
+        elif param.startswith("assistant_"):
+            ref_code = param.replace("assistant_", "")
+            assistant = P002("Assistants", ref_code)
+            if assistant:
+                # حفظ Chat ID في شيت Assistants
+                records = P005("Assistants")
+                for i, r in enumerate(records, start=2):
+                    if str(list(r.values())[0]).strip().lower() == str(ref_code).strip().lower():
+                        P004("Assistants", i, 6, str(chat_id))  # عمود F = telegram_chat_id
+                        break
+                await update.message.reply_text(
+                    f"✅ *تم ربط حسابك بنجاح!*\n\n"
+                    f"👥 {assistant.get('assistant_name', '')}\n"
+                    f"🔹 الكود: `{ref_code}`\n\n"
+                    f"ستصلك مهامك ومستجدات المكتب هنا مباشرة.",
+                    parse_mode="Markdown"
+                )
+                await N001(context, BOSS_CHAT_ID, f"📱 مساعد ربط حسابه بالبوت\n👥 {assistant.get('assistant_name','')}\n🔹 {ref_code}")
+            else:
+                await update.message.reply_text(
+                    "❌ كود المساعد غير صحيح. تواصل مع المكتب.",
+                    parse_mode="Markdown"
+                )
+            return
+
     # ── التحقق من الاشتراك ──
     tenant = MT001(chat_id)
 
