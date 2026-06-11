@@ -7,6 +7,7 @@ from routines import *
 from primitives import *
 from datetime import datetime
 import time
+import base64
 
 TOKEN = "8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk"
 BOSS_CHAT_ID = 8653723225
@@ -165,6 +166,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"👥 {assistant.get('assistant_name', '')}\n"
                     f"🔹 الكود: `{ref_code}`\n\n"
                     f"ستصلك مهامك ومستجدات المكتب هنا مباشرة.",
+                    parse_mode="Markdown"
+                )
+                # ── إرسال رابط لوحة القيادة ──
+                token = base64.b64encode(str(chat_id).encode()).decode()
+                dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}"
+                await update.message.reply_text(
+                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n{dashboard_url}\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="Markdown"
                 )
                 await N001(context, BOSS_CHAT_ID, f"📱 مساعد ربط حسابه بالبوت\n👥 {assistant.get('assistant_name','')}\n🔹 {ref_code}")
