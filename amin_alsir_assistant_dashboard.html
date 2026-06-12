@@ -270,6 +270,7 @@ function showSection(name){document.querySelectorAll('.section').forEach(s=>s.cl
 function openModal(name){document.getElementById('modal-'+name).classList.add('open');}
 function closeModal(name){document.getElementById('modal-'+name).classList.remove('open');}
 function openLink(url){window.open(url,'_blank');}
+function linkAccount(){const chatId=ASSISTANT_CHAT_ID;if(chatId){showToast('✅ حسابك مرتبط بالفعل!');return;}const url='https://t.me/amin_alsir_bot?start=assistant_'+encodeURIComponent(window.location.search);window.open(url,'_blank');}
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'');t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
 </script>
 
