@@ -890,9 +890,28 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("COUNTRY-"):
         country = data.replace("COUNTRY-", "")
         office_name = context.user_data.get("data", {}).get("office_name", "")
-        sheet_name = "amin_alsir_cases_new_V2"
 
-        code = MT002(chat_id, office_name, country, chat_id, sheet_name)
+        # ── توليد كود مؤقت لتسمية الشيت والفولدر ──
+        import time as _time
+        temp_code = f"Of-{int(_time.time()) % 100000:05d}"
+
+        # ── إشعار بالانتظار ──
+        await query.edit_message_text(
+            f"⏳ جاري إعداد مكتبك...\n\n🏢 {office_name}\n🌍 {country}",
+            parse_mode="Markdown"
+        )
+
+        # ── إنشاء شيت جديد ──
+        sheet_name, sheet_id = MT006(office_name, temp_code)
+        if not sheet_name:
+            sheet_name = "amin_alsir_cases_new_V2"
+
+        # ── إنشاء Drive Folder جديد ──
+        drive_folder_id = MT007(temp_code)
+        if not drive_folder_id:
+            drive_folder_id = DRIVE_FOLDER_ID
+
+        code = MT002(chat_id, office_name, country, chat_id, sheet_name, drive_folder_id)
         if code:
             tenant = MT001(chat_id)
             context.user_data.clear()

@@ -125,6 +125,101 @@ def MT005(chat_id):
         print(f"❌ MT005: {e}")
         return "Africa/Cairo"
 
+def MT006(office_name, tenant_code):
+    """إنشاء شيت جديد كامل لمكتب جديد بكل الـ tabs"""
+    try:
+        from googleapiclient.discovery import build
+
+        creds_json = os.environ.get("GOOGLE_CREDENTIALS")
+        creds_dict = json.loads(creds_json)
+        creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        sheets_service = build("sheets", "v4", credentials=creds)
+        drive_service  = build("drive",  "v3", credentials=creds)
+
+        # ── اسم الشيت الجديد ──
+        sheet_name = f"amin_alsir_{tenant_code}"
+
+        # ── إنشاء الشيت بالـ tabs ──
+        spreadsheet = sheets_service.spreadsheets().create(body={
+            "properties": {"title": sheet_name},
+            "sheets": [
+                {"properties": {"title": "Clients"}},
+                {"properties": {"title": "Topics"}},
+                {"properties": {"title": "Events"}},
+                {"properties": {"title": "Documents"}},
+                {"properties": {"title": "Shipments"}},
+                {"properties": {"title": "Custody"}},
+                {"properties": {"title": "Assistants"}},
+                {"properties": {"title": "Notifications"}},
+                {"properties": {"title": "Services"}},
+            ]
+        }).execute()
+
+        spreadsheet_id = spreadsheet["spreadsheetId"]
+        print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
+
+        # ── إضافة هيدر لكل tab ──
+        headers_data = [
+            {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
+            {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
+            {"range": "Events!A1",        "values": [["work_order_no", "event_date", "topic_code", "client_name", "event_type", "event_time", "location_court", "result", "next_appointment", "notes", "attachments"]]},
+            {"range": "Documents!A1",     "values": [["doc_code", "topic_code", "doc_type", "doc_name", "file_extension", "drive_link", "uploaded_by", "upload_date", "status", "approval_date", "notes"]]},
+            {"range": "Shipments!A1",     "values": [["shipment_code", "topic_code", "sender", "receiver", "send_date", "file_name", "file_type", "pickup_location", "receive_status", "receive_date", "notes"]]},
+            {"range": "Custody!A1",       "values": [["custody_code", "responsible_code", "amount", "payment_due", "payment_status", "actual_payment_date", "notes"]]},
+            {"range": "Assistants!A1",    "values": [["assistant_code", "assistant_name", "bar_number", "mobile", "date_added", "notes", "attachments_code", "telegram_chat_id"]]},
+            {"range": "Notifications!A1", "values": [["notification_code", "type", "ref_code", "name", "message", "date"]]},
+            {"range": "Services!A1",      "values": [["service_code", "service_name", "date_added", "notes"]]},
+        ]
+
+        sheets_service.spreadsheets().values().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"valueInputOption": "RAW", "data": headers_data}
+        ).execute()
+        print(f"✅ MT006: تم إضافة الهيدرز لكل الـ tabs")
+
+        # ── مشاركة الشيت مع الـ Service Account ──
+        drive_service.permissions().create(
+            fileId=spreadsheet_id,
+            body={
+                "type": "user",
+                "role": "writer",
+                "emailAddress": "amin-alsir-bot@amin-alsir.iam.gserviceaccount.com"
+            }
+        ).execute()
+        print(f"✅ MT006: تم مشاركة الشيت مع Service Account")
+
+        return sheet_name, spreadsheet_id
+
+    except Exception as e:
+        print(f"❌ MT006: {e}")
+        return None, None
+
+def MT007(tenant_code):
+    """إنشاء Drive Folder جديد لمكتب جديد داخل الـ Shared Drive"""
+    try:
+        service = P001D()
+        if not service:
+            return None
+
+        folder_name = f"amin_alsir_{tenant_code}"
+        folder_metadata = {
+            "name":     folder_name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents":  [DRIVE_FOLDER_ID],
+        }
+        folder = service.files().create(
+            body=folder_metadata,
+            fields="id",
+            supportsAllDrives=True
+        ).execute()
+        folder_id = folder.get("id")
+        print(f"✅ MT007: تم إنشاء مجلد Drive — {folder_name} ({folder_id})")
+        return folder_id
+
+    except Exception as e:
+        print(f"❌ MT007: {e}")
+        return None
+
 # ─────────────────────────────────────────────
 # P001 — الاتصال بـ Google Sheets
 # ─────────────────────────────────────────────
