@@ -167,6 +167,7 @@ body{font-family:var(--font);background:var(--yellow);color:var(--navy);min-heig
   </div>
   <div class="section active" id="sec-main">
     <div class="main-content">
+<div style="background:#3D2E00;border-radius:14px;padding:16px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;"><div><div style="font-size:14px;font-weight:700;color:#fff;">🔗 ربط حسابي بالبوت</div><div style="font-size:11px;color:rgba(255,255,255,0.5);margin-top:4px;">اربط حسابك لاستقبال الإشعارات</div></div><button onclick="linkAccount()" style="background:linear-gradient(135deg,#F5C518,#E8B400);color:#3D2E00;border:none;border-radius:10px;padding:10px 16px;font-family:Tajawal,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">ربط الآن</button></div>
       <div class="section-title">🔔 آخر الإشعارات</div>
       <div id="notifBanners">
         <div class="notif-banner" onclick="showSection('notifications')">
@@ -234,6 +235,8 @@ body{font-family:var(--font);background:var(--yellow);color:var(--navy);min-heig
 <script>
 const SHEET_ID='1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxnG2ZiPHn0Uw7Nz9Z9EoJZ1nRUbHhImtrhlxEVNYd2SkX0l_W3JGYLygVedw21Ofuc/exec';
+function getClientCode(){const params=new URLSearchParams(window.location.search);const token=params.get('t');if(token){const chatId=atob(token);localStorage.setItem('clientChatId',chatId);return chatId;}return localStorage.getItem('clientChatId')||null;}
+const CLIENT_CHAT_ID=getClientCode();
 const BOT_TOKEN='8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk';
 const BOSS_CHAT_ID='8653723225';
 const CLIENT_CODE='Cl-001';
@@ -259,6 +262,7 @@ async function sendNotify(){const subject=document.getElementById('notifSubject'
 function showSection(name){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));const sec=document.getElementById('sec-'+name);const nav=document.getElementById('nav-'+name);if(sec)sec.classList.add('active');if(nav)nav.classList.add('active');window.scrollTo(0,0);}
 function openModal(name){document.getElementById('modal-'+name).classList.add('open');}
 function closeModal(name){document.getElementById('modal-'+name).classList.remove('open');}
+function linkAccount(){const chatId=CLIENT_CHAT_ID;if(chatId){showToast('✅ حسابك مرتبط بالفعل!');return;}const url='https://t.me/amin_alsir_bot?start=client_'+encodeURIComponent(window.location.search);window.open(url,'_blank');}
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'');t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
 </script>
 </body>
