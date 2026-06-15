@@ -10,6 +10,7 @@ from google.oauth2.service_account import Credentials
 SHEET_NAME = "amin_alsir_cases_new_V2"
 CALENDAR_ID = "mostafa.suhagy@gmail.com"
 DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
+SHARED_DRIVE_ID = "0AGGAp8sywzBkUk9PVA"
 TENANTS_SHEET = "amin_alsir_cases_new_V2"
 
 SCOPES = [
@@ -43,11 +44,9 @@ ARAB_TIMEZONES = {
 }
 
 def GET_TIMEZONE(country):
-    """إرجاع الـ timezone الصحيح بناءً على الدولة"""
     return ARAB_TIMEZONES.get(country, "Africa/Cairo")
 
 def NOW_LOCAL(country="مصر"):
-    """إرجاع الوقت الحالي بتوقيت الدولة المحددة"""
     try:
         from zoneinfo import ZoneInfo
         tz = ZoneInfo(GET_TIMEZONE(country))
@@ -59,7 +58,6 @@ def NOW_LOCAL(country="مصر"):
 # Multi-Tenant — إدارة المشتركين
 # ─────────────────────────────────────────────
 def MT001(chat_id):
-    """جلب بيانات المكتب بناءً على الـ chat_id"""
     try:
         records = P005("Tenants", TENANTS_SHEET)
         for r in records:
@@ -71,7 +69,6 @@ def MT001(chat_id):
         return None
 
 def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id=""):
-    """تسجيل مكتب جديد في قاعدة بيانات المشتركين"""
     try:
         code = G001("Of", "Tenants", TENANTS_SHEET)
         ok = P003("Tenants", [
@@ -93,7 +90,6 @@ def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_
         return None
 
 def MT003(chat_id):
-    """التحقق من أن المكتب مشترك ونشط"""
     try:
         tenant = MT001(chat_id)
         if not tenant:
@@ -104,7 +100,6 @@ def MT003(chat_id):
         return False
 
 def MT004(chat_id):
-    """جلب اسم الشيت الخاص بالمكتب"""
     try:
         tenant = MT001(chat_id)
         if not tenant:
@@ -115,7 +110,6 @@ def MT004(chat_id):
         return SHEET_NAME
 
 def MT005(chat_id):
-    """جلب الـ timezone الخاص بالمكتب"""
     try:
         tenant = MT001(chat_id)
         if not tenant:
@@ -126,7 +120,6 @@ def MT005(chat_id):
         return "Africa/Cairo"
 
 def MT006(office_name, tenant_code):
-    """إنشاء شيت جديد كامل لمكتب جديد بكل الـ tabs"""
     try:
         from googleapiclient.discovery import build
 
@@ -136,10 +129,8 @@ def MT006(office_name, tenant_code):
         sheets_service = build("sheets", "v4", credentials=creds)
         drive_service  = build("drive",  "v3", credentials=creds)
 
-        # ── اسم الشيت الجديد ──
         sheet_name = f"amin_alsir_{tenant_code}"
 
-        # ── إنشاء الشيت بالـ tabs ──
         spreadsheet = sheets_service.spreadsheets().create(body={
             "properties": {"title": sheet_name},
             "sheets": [
@@ -158,7 +149,6 @@ def MT006(office_name, tenant_code):
         spreadsheet_id = spreadsheet["spreadsheetId"]
         print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
 
-        # ── إضافة هيدر لكل tab ──
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
             {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
@@ -177,7 +167,6 @@ def MT006(office_name, tenant_code):
         ).execute()
         print(f"✅ MT006: تم إضافة الهيدرز لكل الـ tabs")
 
-        # ── مشاركة الشيت مع الـ Service Account ──
         drive_service.permissions().create(
             fileId=spreadsheet_id,
             body={
@@ -195,7 +184,6 @@ def MT006(office_name, tenant_code):
         return None, None
 
 def MT007(tenant_code):
-    """إنشاء Drive Folder جديد لمكتب جديد داخل الـ Shared Drive"""
     try:
         service = P001D()
         if not service:
@@ -317,7 +305,7 @@ def G001(prefix, tab, sheet_name=SHEET_NAME):
         return f"{prefix}-001"
 
 # ─────────────────────────────────────────────
-# Notification Logger — تسجيل الإشعارات في الشيت
+# Notification Logger
 # ─────────────────────────────────────────────
 def LOG_NOTIFICATION(notif_type, ref_code, name, message):
     try:
@@ -597,7 +585,8 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
             "parents":  [parent_id],
         }
         folder = service.files().create(
-            body=folder_metadata, fields="id",
+            body=folder_metadata,
+            fields="id",
             supportsAllDrives=True
         ).execute()
         folder_id = folder.get("id")
