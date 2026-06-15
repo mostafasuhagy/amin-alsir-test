@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import json
 import gspread
@@ -19,34 +19,34 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar",
 ]
 
-# ─────────────────────────────────────────────
-# المناطق الزمنية للدول العربية
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# ط§ظ„ظ…ظ†ط§ط·ظ‚ ط§ظ„ط²ظ…ظ†ظٹط© ظ„ظ„ط¯ظˆظ„ ط§ظ„ط¹ط±ط¨ظٹط©
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 ARAB_TIMEZONES = {
-    "مصر":       "Africa/Cairo",
-    "السعودية":  "Asia/Riyadh",
-    "الإمارات":  "Asia/Dubai",
-    "الكويت":    "Asia/Kuwait",
-    "قطر":       "Asia/Qatar",
-    "البحرين":   "Asia/Bahrain",
-    "الأردن":    "Asia/Amman",
-    "لبنان":     "Asia/Beirut",
-    "المغرب":    "Africa/Casablanca",
-    "تونس":      "Africa/Tunis",
-    "الجزائر":   "Africa/Algiers",
-    "ليبيا":     "Africa/Tripoli",
-    "العراق":    "Asia/Baghdad",
-    "سوريا":     "Asia/Damascus",
-    "اليمن":     "Asia/Aden",
-    "عمان":      "Asia/Muscat",
-    "السودان":   "Africa/Khartoum",
-    "فلسطين":   "Asia/Gaza",
+    "ظ…طµط±":       "Africa/Cairo",
+    "ط§ظ„ط³ط¹ظˆط¯ظٹط©":  "Asia/Riyadh",
+    "ط§ظ„ط¥ظ…ط§ط±ط§طھ":  "Asia/Dubai",
+    "ط§ظ„ظƒظˆظٹطھ":    "Asia/Kuwait",
+    "ظ‚ط·ط±":       "Asia/Qatar",
+    "ط§ظ„ط¨ط­ط±ظٹظ†":   "Asia/Bahrain",
+    "ط§ظ„ط£ط±ط¯ظ†":    "Asia/Amman",
+    "ظ„ط¨ظ†ط§ظ†":     "Asia/Beirut",
+    "ط§ظ„ظ…ط؛ط±ط¨":    "Africa/Casablanca",
+    "طھظˆظ†ط³":      "Africa/Tunis",
+    "ط§ظ„ط¬ط²ط§ط¦ط±":   "Africa/Algiers",
+    "ظ„ظٹط¨ظٹط§":     "Africa/Tripoli",
+    "ط§ظ„ط¹ط±ط§ظ‚":    "Asia/Baghdad",
+    "ط³ظˆط±ظٹط§":     "Asia/Damascus",
+    "ط§ظ„ظٹظ…ظ†":     "Asia/Aden",
+    "ط¹ظ…ط§ظ†":      "Asia/Muscat",
+    "ط§ظ„ط³ظˆط¯ط§ظ†":   "Africa/Khartoum",
+    "ظپظ„ط³ط·ظٹظ†":   "Asia/Gaza",
 }
 
 def GET_TIMEZONE(country):
     return ARAB_TIMEZONES.get(country, "Africa/Cairo")
 
-def NOW_LOCAL(country="مصر"):
+def NOW_LOCAL(country="ظ…طµط±"):
     try:
         from zoneinfo import ZoneInfo
         tz = ZoneInfo(GET_TIMEZONE(country))
@@ -54,9 +54,9 @@ def NOW_LOCAL(country="مصر"):
     except Exception:
         return datetime.now().strftime("%Y-%m-%d %H:%M")
 
-# ─────────────────────────────────────────────
-# Multi-Tenant — إدارة المشتركين
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Multi-Tenant â€” ط¥ط¯ط§ط±ط© ط§ظ„ظ…ط´طھط±ظƒظٹظ†
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def MT001(chat_id):
     try:
         records = P005("Tenants", TENANTS_SHEET)
@@ -65,7 +65,7 @@ def MT001(chat_id):
                 return r
         return None
     except Exception as e:
-        print(f"❌ MT001: {e}")
+        print(f"â‌Œ MT001: {e}")
         return None
 
 def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id=""):
@@ -83,10 +83,10 @@ def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_
             "active",
             NOW_LOCAL(country),
         ], TENANTS_SHEET)
-        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country})")
+        print(f"âœ… MT002: طھظ… طھط³ط¬ظٹظ„ ظ…ظƒطھط¨ â€” {office_name} ({country})")
         return code if ok else None
     except Exception as e:
-        print(f"❌ MT002: {e}")
+        print(f"â‌Œ MT002: {e}")
         return None
 
 def MT003(chat_id):
@@ -96,7 +96,7 @@ def MT003(chat_id):
             return False
         return tenant.get("status", "") == "active"
     except Exception as e:
-        print(f"❌ MT003: {e}")
+        print(f"â‌Œ MT003: {e}")
         return False
 
 def MT004(chat_id):
@@ -106,7 +106,7 @@ def MT004(chat_id):
             return SHEET_NAME
         return tenant.get("sheet_name", SHEET_NAME)
     except Exception as e:
-        print(f"❌ MT004: {e}")
+        print(f"â‌Œ MT004: {e}")
         return SHEET_NAME
 
 def MT005(chat_id):
@@ -116,7 +116,7 @@ def MT005(chat_id):
             return "Africa/Cairo"
         return tenant.get("timezone", "Africa/Cairo")
     except Exception as e:
-        print(f"❌ MT005: {e}")
+        print(f"â‌Œ MT005: {e}")
         return "Africa/Cairo"
 
 def MT006(office_name, tenant_code):
@@ -147,7 +147,7 @@ def MT006(office_name, tenant_code):
         }).execute()
 
         spreadsheet_id = spreadsheet["spreadsheetId"]
-        print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
+        print(f"âœ… MT006: طھظ… ط¥ظ†ط´ط§ط، ط§ظ„ط´ظٹطھ â€” {sheet_name} ({spreadsheet_id})")
 
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
@@ -165,7 +165,7 @@ def MT006(office_name, tenant_code):
             spreadsheetId=spreadsheet_id,
             body={"valueInputOption": "RAW", "data": headers_data}
         ).execute()
-        print(f"✅ MT006: تم إضافة الهيدرز لكل الـ tabs")
+        print(f"âœ… MT006: طھظ… ط¥ط¶ط§ظپط© ط§ظ„ظ‡ظٹط¯ط±ط² ظ„ظƒظ„ ط§ظ„ظ€ tabs")
 
         drive_service.permissions().create(
             fileId=spreadsheet_id,
@@ -175,12 +175,12 @@ def MT006(office_name, tenant_code):
                 "emailAddress": "amin-alsir-bot@amin-alsir.iam.gserviceaccount.com"
             }
         ).execute()
-        print(f"✅ MT006: تم مشاركة الشيت مع Service Account")
+        print(f"âœ… MT006: طھظ… ظ…ط´ط§ط±ظƒط© ط§ظ„ط´ظٹطھ ظ…ط¹ Service Account")
 
         return sheet_name, spreadsheet_id
 
     except Exception as e:
-        print(f"❌ MT006: {e}")
+        print(f"â‌Œ MT006: {e}")
         return None, None
 
 def MT007(tenant_code):
@@ -201,16 +201,16 @@ def MT007(tenant_code):
             supportsAllDrives=True
         ).execute()
         folder_id = folder.get("id")
-        print(f"✅ MT007: تم إنشاء مجلد Drive — {folder_name} ({folder_id})")
+        print(f"âœ… MT007: طھظ… ط¥ظ†ط´ط§ط، ظ…ط¬ظ„ط¯ Drive â€” {folder_name} ({folder_id})")
         return folder_id
 
     except Exception as e:
-        print(f"❌ MT007: {e}")
+        print(f"â‌Œ MT007: {e}")
         return None
 
-# ─────────────────────────────────────────────
-# P001 — الاتصال بـ Google Sheets
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# P001 â€” ط§ظ„ط§طھطµط§ظ„ ط¨ظ€ Google Sheets
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def P001(sheet_name=SHEET_NAME):
     try:
         creds_json = os.environ.get("GOOGLE_CREDENTIALS")
@@ -219,12 +219,12 @@ def P001(sheet_name=SHEET_NAME):
         client = gspread.authorize(creds)
         return client.open(sheet_name)
     except Exception as e:
-        print(f"❌ P001: {e}")
+        print(f"â‌Œ P001: {e}")
         return None
 
-# ─────────────────────────────────────────────
-# P001C — الاتصال بـ Google Calendar
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# P001C â€” ط§ظ„ط§طھطµط§ظ„ ط¨ظ€ Google Calendar
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def P001C():
     try:
         from googleapiclient.discovery import build
@@ -234,12 +234,12 @@ def P001C():
         service = build("calendar", "v3", credentials=creds)
         return service
     except Exception as e:
-        print(f"❌ P001C: {e}")
+        print(f"â‌Œ P001C: {e}")
         return None
 
-# ─────────────────────────────────────────────
-# P001D — الاتصال بـ Google Drive (Shared Drive)
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# P001D â€” ط§ظ„ط§طھطµط§ظ„ ط¨ظ€ Google Drive (Shared Drive)
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def P001D():
     try:
         from googleapiclient.discovery import build
@@ -249,12 +249,12 @@ def P001D():
         service = build("drive", "v3", credentials=creds)
         return service
     except Exception as e:
-        print(f"❌ P001D: {e}")
+        print(f"â‌Œ P001D: {e}")
         return None
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Google Sheets Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def P002(tab, ref_code, sheet_name=SHEET_NAME):
     try:
         ws = P001(sheet_name).worksheet(tab)
@@ -263,7 +263,7 @@ def P002(tab, ref_code, sheet_name=SHEET_NAME):
                 return r
         return None
     except Exception as e:
-        print(f"❌ P002: {e}")
+        print(f"â‌Œ P002: {e}")
         return None
 
 def P003(tab, data, sheet_name=SHEET_NAME):
@@ -271,7 +271,7 @@ def P003(tab, data, sheet_name=SHEET_NAME):
         P001(sheet_name).worksheet(tab).append_row(data, value_input_option="USER_ENTERED")
         return True
     except Exception as e:
-        print(f"❌ P003: {e}")
+        print(f"â‌Œ P003: {e}")
         return False
 
 def P004(tab, row, col, value, sheet_name=SHEET_NAME):
@@ -279,21 +279,21 @@ def P004(tab, row, col, value, sheet_name=SHEET_NAME):
         P001(sheet_name).worksheet(tab).update_cell(row, col, value)
         return True
     except Exception as e:
-        print(f"❌ P004: {e}")
+        print(f"â‌Œ P004: {e}")
         return False
 
 def P005(tab, sheet_name=SHEET_NAME):
     try:
         return P001(sheet_name).worksheet(tab).get_all_records()
     except Exception as e:
-        print(f"❌ P005: {e}")
+        print(f"â‌Œ P005: {e}")
         return []
 
 def P006(tab, col_name, value, sheet_name=SHEET_NAME):
     try:
         return [r for r in P005(tab, sheet_name) if str(r.get(col_name, "")).strip().lower() == str(value).strip().lower()]
     except Exception as e:
-        print(f"❌ P006: {e}")
+        print(f"â‌Œ P006: {e}")
         return []
 
 def G001(prefix, tab, sheet_name=SHEET_NAME):
@@ -301,12 +301,12 @@ def G001(prefix, tab, sheet_name=SHEET_NAME):
         count = len(P005(tab, sheet_name)) + 1
         return f"{prefix}-{count:03d}"
     except Exception as e:
-        print(f"❌ G001: {e}")
+        print(f"â‌Œ G001: {e}")
         return f"{prefix}-001"
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Notification Logger
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def LOG_NOTIFICATION(notif_type, ref_code, name, message):
     try:
         code = G001("Nt", "Notifications")
@@ -318,13 +318,13 @@ def LOG_NOTIFICATION(notif_type, ref_code, name, message):
             message,
             datetime.now().strftime("%Y-%m-%d %H:%M"),
         ])
-        print(f"✅ LOG_NOTIFICATION: {code} — {notif_type} — {name}")
+        print(f"âœ… LOG_NOTIFICATION: {code} â€” {notif_type} â€” {name}")
     except Exception as e:
-        print(f"❌ LOG_NOTIFICATION: {e}")
+        print(f"â‌Œ LOG_NOTIFICATION: {e}")
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Validators
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def V001(text):
     return bool(text) and isinstance(text, str) and len(text.strip()) >= 3
 
@@ -347,9 +347,9 @@ def V005(amount):
         return float(str(amount).replace(",", "")) > 0
     except: return False
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Google Calendar Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def CAL001(title, date_str, time_str="", location="", description="", calendar_id=CALENDAR_ID):
     try:
         service = P001C()
@@ -361,7 +361,7 @@ def CAL001(title, date_str, time_str="", location="", description="", calendar_i
                 break
             except: continue
         else:
-            print(f"❌ CAL001: تنسيق التاريخ غير صحيح: {date_str}")
+            print(f"â‌Œ CAL001: طھظ†ط³ظٹظ‚ ط§ظ„طھط§ط±ظٹط® ط؛ظٹط± طµط­ظٹط­: {date_str}")
             return None
         if time_str:
             try:
@@ -388,10 +388,10 @@ def CAL001(title, date_str, time_str="", location="", description="", calendar_i
             }
         result = service.events().insert(calendarId=calendar_id, body=event).execute()
         event_id = result.get("id")
-        print(f"✅ CAL001: تم إضافة الحدث — {event_id}")
+        print(f"âœ… CAL001: طھظ… ط¥ط¶ط§ظپط© ط§ظ„ط­ط¯ط« â€” {event_id}")
         return event_id
     except Exception as e:
-        print(f"❌ CAL001: {e}")
+        print(f"â‌Œ CAL001: {e}")
         return None
 
 def CAL002(calendar_id=CALENDAR_ID, days_ahead=30):
@@ -409,13 +409,13 @@ def CAL002(calendar_id=CALENDAR_ID, days_ahead=30):
         for e in events:
             start = e["start"].get("dateTime", e["start"].get("date", ""))
             formatted.append({
-                "id": e.get("id", ""), "title": e.get("summary", "—"),
+                "id": e.get("id", ""), "title": e.get("summary", "â€”"),
                 "start": start, "location": e.get("location", ""),
                 "description": e.get("description", ""),
             })
         return formatted
     except Exception as e:
-        print(f"❌ CAL002: {e}")
+        print(f"â‌Œ CAL002: {e}")
         return []
 
 def CAL003(event_id, calendar_id=CALENDAR_ID):
@@ -424,10 +424,10 @@ def CAL003(event_id, calendar_id=CALENDAR_ID):
         if not service:
             return False
         service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
-        print(f"✅ CAL003: تم حذف الحدث — {event_id}")
+        print(f"âœ… CAL003: طھظ… ط­ط°ظپ ط§ظ„ط­ط¯ط« â€” {event_id}")
         return True
     except Exception as e:
-        print(f"❌ CAL003: {e}")
+        print(f"â‌Œ CAL003: {e}")
         return False
 
 def CAL004(event_id, updates, calendar_id=CALENDAR_ID):
@@ -438,22 +438,22 @@ def CAL004(event_id, updates, calendar_id=CALENDAR_ID):
         event = service.events().get(calendarId=calendar_id, eventId=event_id).execute()
         event.update(updates)
         service.events().update(calendarId=calendar_id, eventId=event_id, body=event).execute()
-        print(f"✅ CAL004: تم تعديل الحدث — {event_id}")
+        print(f"âœ… CAL004: طھظ… طھط¹ط¯ظٹظ„ ط§ظ„ط­ط¯ط« â€” {event_id}")
         return True
     except Exception as e:
-        print(f"❌ CAL004: {e}")
+        print(f"â‌Œ CAL004: {e}")
         return False
 
 def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
     try:
-        return CAL004(event_id, {"description": f"النتيجة: {result_text}"}, calendar_id)
+        return CAL004(event_id, {"description": f"ط§ظ„ظ†طھظٹط¬ط©: {result_text}"}, calendar_id)
     except Exception as e:
-        print(f"❌ CAL005: {e}")
+        print(f"â‌Œ CAL005: {e}")
         return False
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Google Drive Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
     try:
         from googleapiclient.http import MediaFileUpload
@@ -492,11 +492,11 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
             supportsAllDrives=True
         ).execute()
 
-        print(f"✅ DRV001: تم رفع الملف — {file_name} → {drive_link}")
+        print(f"âœ… DRV001: طھظ… ط±ظپط¹ ط§ظ„ظ…ظ„ظپ â€” {file_name} â†’ {drive_link}")
         return drive_link
 
     except Exception as e:
-        print(f"❌ DRV001: {e}")
+        print(f"â‌Œ DRV001: {e}")
         return None
 
 
@@ -514,7 +514,7 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True, includeItemsFromAllDrives=True
+            supportsAllDrives=True
         ).execute()
         folders = res.get("files", [])
         if not folders:
@@ -526,22 +526,22 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
             q=query2,
             fields="files(id, name, webViewLink, createdTime)",
             orderBy="createdTime desc",
-            supportsAllDrives=True, includeItemsFromAllDrives=True
+            supportsAllDrives=True
         ).execute()
 
         files = []
         for f in res2.get("files", []):
             files.append({
-                "name":         f.get("name", "—"),
+                "name":         f.get("name", "â€”"),
                 "link":         f.get("webViewLink", f"https://drive.google.com/file/d/{f['id']}/view"),
                 "created_time": f.get("createdTime", "")[:10],
             })
 
-        print(f"✅ DRV002: تم جلب {len(files)} ملف للموضوع {topic_code}")
+        print(f"âœ… DRV002: طھظ… ط¬ظ„ط¨ {len(files)} ظ…ظ„ظپ ظ„ظ„ظ…ظˆط¶ظˆط¹ {topic_code}")
         return files
 
     except Exception as e:
-        print(f"❌ DRV002: {e}")
+        print(f"â‌Œ DRV002: {e}")
         return []
 
 
@@ -551,10 +551,10 @@ def DRV003(file_id):
         if not service:
             return False
         service.files().delete(fileId=file_id, supportsAllDrives=True).execute()
-        print(f"✅ DRV003: تم حذف الملف — {file_id}")
+        print(f"âœ… DRV003: طھظ… ط­ط°ظپ ط§ظ„ظ…ظ„ظپ â€” {file_id}")
         return True
     except Exception as e:
-        print(f"❌ DRV003: {e}")
+        print(f"â‌Œ DRV003: {e}")
         return False
 
 
@@ -572,11 +572,11 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True, includeItemsFromAllDrives=True
+            supportsAllDrives=True
         ).execute()
         existing = res.get("files", [])
         if existing:
-            print(f"✅ DRV004: مجلد موجود — {folder_name} ({existing[0]['id']})")
+            print(f"âœ… DRV004: ظ…ط¬ظ„ط¯ ظ…ظˆط¬ظˆط¯ â€” {folder_name} ({existing[0]['id']})")
             return existing[0]["id"]
 
         folder_metadata = {
@@ -590,11 +590,11 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
             supportsAllDrives=True
         ).execute()
         folder_id = folder.get("id")
-        print(f"✅ DRV004: تم إنشاء مجلد — {folder_name} ({folder_id})")
+        print(f"âœ… DRV004: طھظ… ط¥ظ†ط´ط§ط، ظ…ط¬ظ„ط¯ â€” {folder_name} ({folder_id})")
         return folder_id
 
     except Exception as e:
-        print(f"❌ DRV004: {e}")
+        print(f"â‌Œ DRV004: {e}")
         return None
 
 
@@ -632,21 +632,21 @@ def DRV005(file_path, file_name, folder_id=DRIVE_FOLDER_ID):
             supportsAllDrives=True
         ).execute()
 
-        print(f"✅ DRV005: تم رفع الملف — {file_name} → {drive_link}")
+        print(f"âœ… DRV005: طھظ… ط±ظپط¹ ط§ظ„ظ…ظ„ظپ â€” {file_name} â†’ {drive_link}")
         return drive_link
 
     except Exception as e:
-        print(f"❌ DRV005: {e}")
+        print(f"â‌Œ DRV005: {e}")
         return None
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Telegram Message Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def T001(context, chat_id, text):
     try:
         return await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
     except Exception as e:
-        print(f"❌ T001: {e}")
+        print(f"â‌Œ T001: {e}")
         return None
 
 async def T002(context, chat_id, text, buttons):
@@ -655,7 +655,7 @@ async def T002(context, chat_id, text, buttons):
         kb = [[InlineKeyboardButton(b["text"], callback_data=b["callback_data"]) for b in row] for row in buttons]
         return await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown", reply_markup=InlineKeyboardMarkup(kb))
     except Exception as e:
-        print(f"❌ T002: {e}")
+        print(f"â‌Œ T002: {e}")
         return None
 
 async def T003(context, chat_id, message_id, new_text, buttons=None):
@@ -668,7 +668,7 @@ async def T003(context, chat_id, message_id, new_text, buttons=None):
         await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=new_text, parse_mode="Markdown", reply_markup=markup)
         return True
     except Exception as e:
-        print(f"❌ T003: {e}")
+        print(f"â‌Œ T003: {e}")
         return False
 
 async def T004(update, context):
@@ -682,68 +682,68 @@ async def T004(update, context):
             return {"type": "photo", "file_id": f.file_id}
         return None
     except Exception as e:
-        print(f"❌ T004: {e}")
+        print(f"â‌Œ T004: {e}")
         return None
 
 async def T005(context, chat_id, text, options):
     try:
         return await T002(context, chat_id, text, [[opt] for opt in options])
     except Exception as e:
-        print(f"❌ T005: {e}")
+        print(f"â‌Œ T005: {e}")
         return None
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Notification Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 async def N001(context, boss_chat_id, text):
     try:
         await context.bot.send_message(
             chat_id=boss_chat_id,
-            text=f"🔔 *إشعار — أمين السر*\n\n{text}",
+            text=f"ًں”” *ط¥ط´ط¹ط§ط± â€” ط£ظ…ظٹظ† ط§ظ„ط³ط±*\n\n{text}",
             parse_mode="Markdown"
         )
-        LOG_NOTIFICATION("رئيس", str(boss_chat_id), "المدير", text)
+        LOG_NOTIFICATION("ط±ط¦ظٹط³", str(boss_chat_id), "ط§ظ„ظ…ط¯ظٹط±", text)
         return True
     except Exception as e:
-        print(f"❌ N001: {e}")
+        print(f"â‌Œ N001: {e}")
         return False
 
 async def N002(context, client_chat_id, text):
     try:
         await context.bot.send_message(
             chat_id=client_chat_id,
-            text=f"📩 *رسالة من مكتب المحاماة*\n\n{text}",
+            text=f"ًں“© *ط±ط³ط§ظ„ط© ظ…ظ† ظ…ظƒطھط¨ ط§ظ„ظ…ط­ط§ظ…ط§ط©*\n\n{text}",
             parse_mode="Markdown"
         )
-        LOG_NOTIFICATION("عميل", str(client_chat_id), "عميل", text)
+        LOG_NOTIFICATION("ط¹ظ…ظٹظ„", str(client_chat_id), "ط¹ظ…ظٹظ„", text)
         return True
     except Exception as e:
-        print(f"❌ N002: {e}")
+        print(f"â‌Œ N002: {e}")
         return False
 
 async def N003(context, assistant_chat_id, text):
     try:
         await context.bot.send_message(
             chat_id=assistant_chat_id,
-            text=f"📋 *مهمة جديدة — أمين السر*\n\n{text}",
+            text=f"ًں“‹ *ظ…ظ‡ظ…ط© ط¬ط¯ظٹط¯ط© â€” ط£ظ…ظٹظ† ط§ظ„ط³ط±*\n\n{text}",
             parse_mode="Markdown"
         )
-        LOG_NOTIFICATION("مساعد", str(assistant_chat_id), "مساعد", text)
+        LOG_NOTIFICATION("ظ…ط³ط§ط¹ط¯", str(assistant_chat_id), "ظ…ط³ط§ط¹ط¯", text)
         return True
     except Exception as e:
-        print(f"❌ N003: {e}")
+        print(f"â‌Œ N003: {e}")
         return False
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Events Helper Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def C001(title, date, location=""):
     try:
         if not V001(title) or not V004(date): return None
         success = P003("Events", [title, date, location, datetime.now().strftime("%Y-%m-%d %H:%M")])
         return {"title": title, "date": date, "location": location} if success else None
     except Exception as e:
-        print(f"❌ C001: {e}")
+        print(f"â‌Œ C001: {e}")
         return None
 
 def C002(event_ref, updated_data):
@@ -757,7 +757,7 @@ def C002(event_ref, updated_data):
                 return True
         return False
     except Exception as e:
-        print(f"❌ C002: {e}")
+        print(f"â‌Œ C002: {e}")
         return False
 
 def C003():
@@ -776,26 +776,26 @@ def C003():
                 except: continue
         return sorted(upcoming, key=lambda x: x.get("event_date", x.get("date", "")))
     except Exception as e:
-        print(f"❌ C003: {e}")
+        print(f"â‌Œ C003: {e}")
         return []
 
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Link Functions
-# ─────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 def L001(user_type, ref_code):
     try:
         token = hashlib.sha256(f"{user_type}:{ref_code}:{int(time.time())}".encode()).hexdigest()[:16]
         return f"https://t.me/amin_alsir_bot?start={user_type}_{ref_code}_{token}"
     except Exception as e:
-        print(f"❌ L001: {e}")
+        print(f"â‌Œ L001: {e}")
         return None
 
 async def L002(context, recipient_chat_id, link):
     try:
-        await context.bot.send_message(chat_id=recipient_chat_id, text=f"🔗 *رابط لوحة القيادة*\n\n{link}", parse_mode="Markdown")
+        await context.bot.send_message(chat_id=recipient_chat_id, text=f"ًں”— *ط±ط§ط¨ط· ظ„ظˆط­ط© ط§ظ„ظ‚ظٹط§ط¯ط©*\n\n{link}", parse_mode="Markdown")
         return True
     except Exception as e:
-        print(f"❌ L002: {e}")
+        print(f"â‌Œ L002: {e}")
         return False
 
 def L003(link):
@@ -805,5 +805,5 @@ def L003(link):
         if len(parts) < 3: return None
         return {"user_type": parts[0], "ref_code": parts[1], "token": parts[2]}
     except Exception as e:
-        print(f"❌ L003: {e}")
+        print(f"â‌Œ L003: {e}")
         return None
