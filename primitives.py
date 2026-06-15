@@ -486,14 +486,14 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
-            "driveId": "0AGGAp8sywzBkUk9PVA",
         }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
             body=file_metadata,
             media_body=media,
             fields="id, webViewLink",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
         ).execute()
 
         file_id    = uploaded.get("id")
@@ -596,11 +596,11 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
             "name":     folder_name,
             "mimeType": "application/vnd.google-apps.folder",
             "parents":  [parent_id],
-            "driveId":  "0AGGAp8sywzBkUk9PVA",
         }
         folder = service.files().create(
             body=folder_metadata, fields="id",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True
         ).execute()
         folder_id = folder.get("id")
         print(f"✅ DRV004: تم إنشاء مجلد — {folder_name} ({folder_id})")
