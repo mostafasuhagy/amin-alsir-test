@@ -492,8 +492,7 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
             body=file_metadata,
             media_body=media,
             fields="id, webViewLink",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
+            supportsAllDrives=True
         ).execute()
 
         file_id    = uploaded.get("id")
@@ -599,8 +598,7 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
         }
         folder = service.files().create(
             body=folder_metadata, fields="id",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True
+            supportsAllDrives=True
         ).execute()
         folder_id = folder.get("id")
         print(f"✅ DRV004: تم إنشاء مجلد — {folder_name} ({folder_id})")
