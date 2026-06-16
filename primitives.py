@@ -572,7 +572,10 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID
         ).execute()
         existing = res.get("files", [])
         if existing:
@@ -590,7 +593,7 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
             supportsAllDrives=True
         ).execute()
         folder_id = folder.get("id")
-        print(f"âœ… DRV004: طھظ… ط¥ظ†ط´ط§ط، ظ…ط¬ظ„ط¯ â€” {folder_name} ({folder_id})")
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                print(f"âœ… DRV004: طھظ… ط¥ظ†ط´ط§ط، ظ…ط¬ظ„ط¯ â€” {folder_name} ({folder_id})")
         return folder_id
 
     except Exception as e:
