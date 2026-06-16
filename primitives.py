@@ -1,4 +1,4 @@
-﻿import os
+import os
 import re
 import json
 import gspread
@@ -572,7 +572,10 @@ def DRV004(folder_name, parent_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID
         ).execute()
         existing = res.get("files", [])
         if existing:
