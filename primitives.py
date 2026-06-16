@@ -474,14 +474,14 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
-            "driveId": SHARED_DRIVE_ID,
-        }
+            }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
             body=file_metadata,
             media_body=media,
             fields="id, webViewLink",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            driveId=SHARED_DRIVE_ID
         ).execute()
 
         file_id    = uploaded.get("id")
@@ -624,7 +624,8 @@ def DRV005(file_path, file_name, folder_id=DRIVE_FOLDER_ID):
             body=file_metadata,
             media_body=media,
             fields="id, webViewLink",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            driveId=SHARED_DRIVE_ID
         ).execute()
 
         file_id    = uploaded.get("id")
