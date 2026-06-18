@@ -282,32 +282,8 @@
         }).join('');
       })
       .catch(function() {
-        // fallback static
         var grid = document.getElementById('price-grid');
-        grid.innerHTML =
-          '<div class="price-card">' +
-          '<h3>الباقة الأساسية</h3>' +
-          '<div class="price-num">٢٩٩</div>' +
-          '<p class="price-period">جنيه / شهرياً</p>' +
-          '<ul class="price-list">' +
-          '<li>بوت تيليجرام خاص</li>' +
-          '<li>إدارة العملاء والقضايا</li>' +
-          '<li>نظام الإشعارات</li>' +
-          '</ul>' +
-          '<button class="btn-gold" style="width:100%;font-size:1rem;" onclick="contactUs()">اشترك الآن</button>' +
-          '</div>' +
-          '<div class="price-card hot">' +
-          '<div class="hot-badge">الأكثر طلباً</div>' +
-          '<h3>الباقة الاحترافية</h3>' +
-          '<div class="price-num">٥٩٩</div>' +
-          '<p class="price-period">جنيه / شهرياً</p>' +
-          '<ul class="price-list">' +
-          '<li>كل مميزات الأساسية</li>' +
-          '<li>إدارة المستندات كاملة</li>' +
-          '<li>تكامل Google Calendar</li>' +
-          '</ul>' +
-          '<button class="btn-gold" style="width:100%;font-size:1rem;" onclick="contactUs()">اشترك الآن</button>' +
-          '</div>';
+        grid.innerHTML = '<div style="color:#c4a04c;text-align:center;padding:3rem;">طھظˆط§طµظ„ ظ…ط¹ظ†ط§ ظ„ظ„ط§ط·ظ„ط§ط¹ ط¹ظ„ظ‰ ط§ظ„ط£ط³ط¹ط§ط±</div>';
       });
   }
 
