@@ -424,6 +424,28 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 # ═══════════════════════════════════════
+# 🔍 أمر اختباري مؤقت — /testpay
+# يطلب رابط دفع تجريبي من Paymob (Test mode) عشان نتأكد
+# إن create_payment_link() شغالة، ونشوف شكل الـ webhook الحقيقي.
+# (هنشيل الأمر ده بعد ما نخلص الاختبار)
+# ═══════════════════════════════════════
+async def testpay(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    test_tenant_code = "TEST-001"
+    await update.message.reply_text("⏳ بطلب رابط دفع تجريبي من Paymob...")
+    link = create_payment_link(test_tenant_code, "monthly", "مكتب تجريبي")
+    if link:
+        await update.message.reply_text(
+            f"✅ *تم إنشاء رابط الدفع التجريبي!*\n\n"
+            f"🔹 Tenant Code: `{test_tenant_code}`\n"
+            f"🔗 {link}\n\n"
+            f"دوس على الرابط وجرّب الدفع ببيانات كارت تجريبي من Paymob.",
+            parse_mode="Markdown"
+        )
+    else:
+        await update.message.reply_text("❌ فشل إنشاء رابط الدفع. شوف الـ Logs على Railway لمعرفة السبب.")
+
+# ═══════════════════════════════════════
 # Text Router
 # ═══════════════════════════════════════
 async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1272,6 +1294,7 @@ if __name__ == "__main__":
         .build()
     )
     app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("testpay", testpay))  # 🔍 مؤقت — للاختبار فقط
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
