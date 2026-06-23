@@ -78,24 +78,17 @@ def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str =
         "Content-Type": "application/json",
     }
 
-    # ═══════════════════════════════════════
-    # 🔍 مؤقت: نتأكد إن المفتاح فعلاً موجود وقت التشغيل (بدون كشف قيمته)
-    # ═══════════════════════════════════════
-    print(f"🔑 PAYMOB_SECRET_KEY length: {len(PAYMOB_SECRET_KEY)} chars | starts with: {PAYMOB_SECRET_KEY[:12] if PAYMOB_SECRET_KEY else '(EMPTY)'}")
-
     try:
         resp = requests.post(PAYMOB_INTENTION_URL, json=payload, headers=headers, timeout=20)
-
-        # ═══════════════════════════════════════
-        # 🔍 نطبع تفاصيل الرد الكامل لو فيه مشكلة (status != 2xx)
-        # عشان نشوف رسالة الخطأ الحقيقية من Paymob، مش بس الكود العام
-        # ═══════════════════════════════════════
-        if not resp.ok:
-            print(f"❌ Paymob intention failed — status {resp.status_code}")
-            print(f"❌ Response body: {resp.text}")
-            return None
-
+        resp.raise_for_status()
         data = resp.json()
+
+        # ═══════════════════════════════════════
+        # 🆕 مؤقت: نطبع رد Paymob الكامل دايماً (نجح أو فشل)
+        # عشان نشوف تفاصيل الـ Intention الحقيقية. هنشيل السطر ده بعد التشخيص.
+        # ═══════════════════════════════════════
+        print(f"📦 Paymob intention FULL response: {json.dumps(data, indent=2, ensure_ascii=False)}")
+
         client_secret = data.get("client_secret")
         if not client_secret:
             print(f"❌ Paymob intention response missing client_secret: {data}")
