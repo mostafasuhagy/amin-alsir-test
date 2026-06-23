@@ -78,6 +78,11 @@ def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str =
         "Content-Type": "application/json",
     }
 
+    # ═══════════════════════════════════════
+    # 🔍 مؤقت: نتأكد إن المفتاح فعلاً موجود وقت التشغيل (بدون كشف قيمته)
+    # ═══════════════════════════════════════
+    print(f"🔑 PAYMOB_SECRET_KEY length: {len(PAYMOB_SECRET_KEY)} chars | starts with: {PAYMOB_SECRET_KEY[:12] if PAYMOB_SECRET_KEY else '(EMPTY)'}")
+
     try:
         resp = requests.post(PAYMOB_INTENTION_URL, json=payload, headers=headers, timeout=20)
 
