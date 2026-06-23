@@ -9,8 +9,190 @@ from datetime import datetime
 import time
 import base64
 
+# ═══════════════════════════════════════
+# Paymob Webhook — مكتبات إضافية
+# ═══════════════════════════════════════
+import hmac
+import hashlib
+import threading
+import asyncio
+import json
+import requests
+from flask import Flask, request, jsonify
+
 TOKEN = os.environ.get("BOT_TOKEN", "")
 BOSS_CHAT_ID = int(os.environ.get("BOSS_CHAT_ID", "8653723225"))  # v2.1
+
+# ═══════════════════════════════════════
+# Paymob — متغيرات الإعداد (من Railway Variables)
+# ═══════════════════════════════════════
+PAYMOB_API_KEY         = os.environ.get("PAYMOB_API_KEY", "")
+PAYMOB_SECRET_KEY      = os.environ.get("PAYMOB_SECRET_KEY", "")
+PAYMOB_PUBLIC_KEY      = os.environ.get("PAYMOB_PUBLIC_KEY", "")
+PAYMOB_HMAC            = os.environ.get("PAYMOB_HMAC", "")
+PAYMOB_INTEGRATION_ID  = os.environ.get("PAYMOB_INTEGRATION_ID", "")
+SUBSCRIPTION_MONTHLY   = float(os.environ.get("SUBSCRIPTION_MONTHLY", "135"))
+SUBSCRIPTION_YEARLY    = float(os.environ.get("SUBSCRIPTION_YEARLY", "1200"))
+PAYMOB_INTENTION_URL   = "https://accept.paymob.com/v1/intention/"
+
+
+def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str = ""):
+    """
+    تطلب من Paymob رابط دفع مخصص لمكتب معيّن (tenant_code).
+    billing_cycle: "monthly" أو "yearly"
+    بترجع: رابط الدفع (string) أو None لو فشلت.
+    """
+    amount_egp = SUBSCRIPTION_MONTHLY if billing_cycle == "monthly" else SUBSCRIPTION_YEARLY
+    amount_cents = int(round(amount_egp * 100))
+
+    payload = {
+        "amount": amount_cents,
+        "currency": "EGP",
+        "payment_methods": [int(PAYMOB_INTEGRATION_ID)] if PAYMOB_INTEGRATION_ID else ["card"],
+        "items": [
+            {
+                "name": f"اشتراك أمين السر - {billing_cycle}",
+                "amount": amount_cents,
+                "description": f"Tenant: {tenant_code}",
+                "quantity": 1,
+            }
+        ],
+        "billing_data": {
+            "apartment": "NA", "floor": "NA", "street": "NA",
+            "building": "NA", "shipping_method": "NA",
+            "postal_code": "NA", "city": "NA", "country": "EG",
+            "state": "NA",
+            "first_name": office_name or "Tenant",
+            "last_name": tenant_code,
+            "email": f"{tenant_code}@aminalserr.com",
+            "phone_number": "+201000000000",
+        },
+        "extras": {
+            "tenant_code": tenant_code,
+            "billing_cycle": billing_cycle,
+        },
+    }
+
+    headers = {
+        "Authorization": f"Token {PAYMOB_SECRET_KEY}",
+        "Content-Type": "application/json",
+    }
+
+    try:
+        resp = requests.post(PAYMOB_INTENTION_URL, json=payload, headers=headers, timeout=20)
+        resp.raise_for_status()
+        data = resp.json()
+        client_secret = data.get("client_secret")
+        if not client_secret:
+            print(f"❌ Paymob intention response missing client_secret: {data}")
+            return None
+        return f"https://accept.paymob.com/unifiedcheckout/?publicKey={PAYMOB_PUBLIC_KEY}&clientSecret={client_secret}"
+    except Exception as e:
+        print(f"❌ create_payment_link error: {e}")
+        return None
+
+
+# ═══════════════════════════════════════
+# Flask App — لاستقبال Webhook من Paymob
+# ═══════════════════════════════════════
+flask_app = Flask(__name__)
+
+
+def verify_hmac(data: dict, received_hmac: str) -> bool:
+    """
+    يتحقق إن الطلب جاي فعلاً من Paymob ومش مزوّر.
+    حسب الـ documentation الرسمي لـ Paymob (transaction callback HMAC):
+    https://docs.paymob.com/docs/hmac-calculation
+    """
+    ordered_fields = [
+        "amount_cents", "created_at", "currency", "error_occured",
+        "has_parent_transaction", "id", "integration_id", "is_3d_secure",
+        "is_auth", "is_capture", "is_refunded", "is_standalone_payment",
+        "is_voided", "order.id", "owner", "pending", "source_data.pan",
+        "source_data.sub_type", "source_data.type", "success",
+    ]
+
+    def get_nested(d, key):
+        if "." in key:
+            parent, child = key.split(".", 1)
+            return d.get(parent, {}).get(child, "")
+        return d.get(key, "")
+
+    concatenated = "".join(str(get_nested(data, f)) for f in ordered_fields)
+
+    calculated_hmac = hmac.new(
+        PAYMOB_HMAC.encode("utf-8"),
+        concatenated.encode("utf-8"),
+        hashlib.sha512,
+    ).hexdigest()
+
+    return hmac.compare_digest(calculated_hmac, received_hmac or "")
+
+
+@flask_app.route("/webhook/paymob", methods=["POST"])
+def paymob_webhook():
+    try:
+        payload = request.get_json(force=True)
+
+        # ═══════════════════════════════════════
+        # 🔍 مؤقت: نطبع الـ payload كامل عشان نشوف شكله الحقيقي
+        # (هنشيل السطرين دول بعد ما نتأكد من مكان tenant_code)
+        # ═══════════════════════════════════════
+        print("═" * 50)
+        print("📦 PAYMOB WEBHOOK — FULL PAYLOAD RECEIVED:")
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        print("═" * 50)
+
+        obj = payload.get("obj", {})
+
+        received_hmac = request.args.get("hmac", "")
+        if not verify_hmac(obj, received_hmac):
+            print("❌ Webhook HMAC mismatch — تجاهلنا الطلب (ممكن يكون مزوّر)")
+            return jsonify({"status": "invalid_hmac"}), 400
+
+        success = obj.get("success", False)
+        extras = obj.get("payment_key_claims", {}).get("extra", {}) or obj.get("order", {}).get("extras", {})
+        tenant_code = extras.get("tenant_code", "")
+        billing_cycle = extras.get("billing_cycle", "")
+
+        if success and tenant_code:
+            activate_tenant(tenant_code, billing_cycle)
+            print(f"✅ Webhook: تم تفعيل {tenant_code} ({billing_cycle})")
+        else:
+            print(f"⚠️ Webhook: دفع غير ناجح أو tenant_code مفقود — {obj.get('id')}")
+
+        return jsonify({"status": "received"}), 200
+
+    except Exception as e:
+        print(f"❌ paymob_webhook error: {e}")
+        return jsonify({"status": "error"}), 500
+
+
+def activate_tenant(tenant_code: str, billing_cycle: str):
+    """
+    يفعّل المكتب في شيت Tenants: يغيّر status لـ active، ويبعت رسالة تأكيد للعميل.
+    """
+    try:
+        records = P005("Tenants")
+        for i, r in enumerate(records, start=2):
+            if str(r.get("tenant_code", "")).strip() == str(tenant_code).strip():
+                P004("Tenants", i, 9, "active")  # العمود I = status
+                chat_id = r.get("chat_id", "")
+                if chat_id:
+                    bot_instance = ApplicationBuilder().token(TOKEN).build().bot
+                    asyncio.run(bot_instance.send_message(
+                        chat_id=int(chat_id),
+                        text="✅ *تم تفعيل اشتراكك بنجاح!*\n\nمرحباً بك في أمين السر 🏛️",
+                        parse_mode="Markdown",
+                    ))
+                break
+    except Exception as e:
+        print(f"❌ activate_tenant error: {e}")
+
+
+def run_flask():
+    port = int(os.environ.get("PORT", 8080))
+    flask_app.run(host="0.0.0.0", port=port)
 
 ROUTE_MAP = {
     "F-001": F001,   # إضافة عميل
@@ -1093,4 +1275,12 @@ if __name__ == "__main__":
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
+
+    # ═══════════════════════════════════════
+    # تشغيل Flask (Paymob webhook) في Thread منفصل، جنب البوت
+    # ═══════════════════════════════════════
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    print("✅ Flask webhook thread started")
+
     app.run_polling(drop_pending_updates=True)
