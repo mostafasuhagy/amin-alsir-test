@@ -179,15 +179,29 @@ def activate_tenant(tenant_code: str, billing_cycle: str):
                 P004("Tenants", i, 9, "active")  # العمود I = status
                 chat_id = r.get("chat_id", "")
                 if chat_id:
-                    bot_instance = ApplicationBuilder().token(TOKEN).build().bot
-                    asyncio.run(bot_instance.send_message(
-                        chat_id=int(chat_id),
-                        text="✅ *تم تفعيل اشتراكك بنجاح!*\n\nمرحباً بك في أمين السر 🏛️",
-                        parse_mode="Markdown",
-                    ))
+                    send_telegram_message_sync(
+                        chat_id,
+                        "✅ *تم تفعيل اشتراكك بنجاح!*\n\nمرحباً بك في أمين السر 🏛️",
+                    )
                 break
     except Exception as e:
         print(f"❌ activate_tenant error: {e}")
+
+
+def send_telegram_message_sync(chat_id, text: str):
+    """
+    يبعت رسالة تيليجرام مباشرة عن طريق HTTP request بسيط (بدون عمل Application instance جديد).
+    أخف وأكثر أماناً من جوه Flask thread، وما يتعارض مع event loop البوت الأساسي.
+    """
+    try:
+        url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
+        requests.post(url, json={
+            "chat_id": int(chat_id),
+            "text": text,
+            "parse_mode": "Markdown",
+        }, timeout=10)
+    except Exception as e:
+        print(f"❌ send_telegram_message_sync error: {e}")
 
 
 def run_flask():
