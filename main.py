@@ -80,7 +80,16 @@ def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str =
 
     try:
         resp = requests.post(PAYMOB_INTENTION_URL, json=payload, headers=headers, timeout=20)
-        resp.raise_for_status()
+
+        # ═══════════════════════════════════════
+        # 🔍 نطبع تفاصيل الرد الكامل لو فيه مشكلة (status != 2xx)
+        # عشان نشوف رسالة الخطأ الحقيقية من Paymob، مش بس الكود العام
+        # ═══════════════════════════════════════
+        if not resp.ok:
+            print(f"❌ Paymob intention failed — status {resp.status_code}")
+            print(f"❌ Response body: {resp.text}")
+            return None
+
         data = resp.json()
         client_secret = data.get("client_secret")
         if not client_secret:
