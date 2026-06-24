@@ -9,7 +9,7 @@ from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
 CALENDAR_ID = "mostafa.suhagy@gmail.com"
-DRIVE_FOLDER_ID = "0AGGAp8sywzBkUk9PVA"  # تم تصحيحه ليشير لجذر Shared Drive amin_alsir_docs (كان يشاور على مجلد قديم في My Drive)
+DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
 SHARED_DRIVE_ID = "0AGGAp8sywzBkUk9PVA"
 TENANTS_SHEET = "amin_alsir_cases_new_V2"
 
@@ -120,8 +120,24 @@ def MT005(chat_id):
         return "Africa/Cairo"
 
 def MT006(office_name, tenant_code):
+    """
+    ينشئ Google Sheet خاص بمكتب جديد (Tenant) داخل الـ Shared Drive.
+
+    NOTE (fix 2026-06-24): النمط القديم كان يستخدم
+    sheets_service.spreadsheets().create() مباشرة، وهذا يجعل
+    الـ Service Account "يملك" الملف في مساحته الشخصية، والـ Service
+    Account ليس لديها أي storage quota → فشل بصلاحيات 403.
+
+    الحل: إنشاء الملف الفاضي عبر Drive API أولاً (نفس نمط MT007
+    الناجح بالفعل)، مع تحديد mimeType = spreadsheet و
+    parents = [SHARED_DRIVE_ID] و supportsAllDrives=True، فيصبح
+    الملف مملوكًا للـ Shared Drive نفسه لا للـ Service Account.
+    بعد ذلك نستخدم Sheets API فقط لإعادة تسمية التبويب الافتراضي
+    وإضافة باقي التبويبات والهيدرز عبر batchUpdate / values batchUpdate.
+    """
     try:
         from googleapiclient.discovery import build
+        from googleapiclient.errors import HttpError
 
         creds_json = os.environ.get("GOOGLE_CREDENTIALS")
         creds_dict = json.loads(creds_json)
@@ -131,48 +147,52 @@ def MT006(office_name, tenant_code):
 
         sheet_name = f"amin_alsir_{tenant_code}"
 
-        # FIXED: create the file via Drive API directly inside the Shared Drive.
-        # The old approach (sheets_service.spreadsheets().create()) fails with
-        # HttpError 403 because the Service Account has no storage quota of
-        # its own to own newly created Sheets files.
+        tab_titles = [
+            "Clients", "Topics", "Events", "Documents", "Shipments",
+            "Custody", "Assistants", "Notifications", "Services",
+        ]
+
+        # 1) إنشاء الملف الفاضي عبر Drive API داخل الـ Shared Drive
+        #    (نفس نمط MT007 الناجح بالضبط)
         file_metadata = {
-            "name": sheet_name,
+            "name":     sheet_name,
             "mimeType": "application/vnd.google-apps.spreadsheet",
-            "parents": [SHARED_DRIVE_ID],
+            "parents":  [SHARED_DRIVE_ID],
         }
-        new_file = drive_service.files().create(
+        drive_file = drive_service.files().create(
             body=file_metadata,
             fields="id",
             supportsAllDrives=True,
         ).execute()
-        spreadsheet_id = new_file.get("id")
-        print(f"DONE: MT006 - spreadsheet file created in Shared Drive ({spreadsheet_id})")
+        spreadsheet_id = drive_file.get("id")
+        print(f"✅ MT006: تم إنشاء ملف Spreadsheet عبر Drive API — {sheet_name} ({spreadsheet_id})")
 
-        # Add all required tabs via Sheets API batchUpdate
+        # 2) إعادة تسمية التبويب الافتراضي (Sheet1) إلى أول تبويب مطلوب،
+        #    ثم إضافة باقي التبويبات بعده — كل ذلك عبر batchUpdate واحد
+        default_sheet = sheets_service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            fields="sheets.properties",
+        ).execute()
+        default_sheet_id = default_sheet["sheets"][0]["properties"]["sheetId"]
+
+        requests = [
+            {
+                "updateSheetProperties": {
+                    "properties": {"sheetId": default_sheet_id, "title": tab_titles[0]},
+                    "fields": "title",
+                }
+            }
+        ]
+        for title in tab_titles[1:]:
+            requests.append({"addSheet": {"properties": {"title": title}}})
+
         sheets_service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
-            body={"requests": [
-                {"addSheet": {"properties": {"title": "Clients"}}},
-                {"addSheet": {"properties": {"title": "Topics"}}},
-                {"addSheet": {"properties": {"title": "Events"}}},
-                {"addSheet": {"properties": {"title": "Documents"}}},
-                {"addSheet": {"properties": {"title": "Shipments"}}},
-                {"addSheet": {"properties": {"title": "Custody"}}},
-                {"addSheet": {"properties": {"title": "Assistants"}}},
-                {"addSheet": {"properties": {"title": "Notifications"}}},
-                {"addSheet": {"properties": {"title": "Services"}}},
-            ]}
+            body={"requests": requests},
         ).execute()
+        print(f"✅ MT006: تم إنشاء/تسمية كل الـ tabs ({', '.join(tab_titles)})")
 
-        # Remove the default "Sheet1" tab that Drive auto-creates with every new spreadsheet
-        spreadsheet_info = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-        default_sheet_id = spreadsheet_info["sheets"][0]["properties"]["sheetId"]
-        sheets_service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body={"requests": [{"deleteSheet": {"sheetId": default_sheet_id}}]}
-        ).execute()
-        print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
-
+        # 3) إضافة الهيدرز لكل تبويب
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
             {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
@@ -191,18 +211,15 @@ def MT006(office_name, tenant_code):
         ).execute()
         print(f"✅ MT006: تم إضافة الهيدرز لكل الـ tabs")
 
-        drive_service.permissions().create(
-            fileId=spreadsheet_id,
-            body={
-                "type": "user",
-                "role": "writer",
-                "emailAddress": "amin-alsir-bot@amin-alsir.iam.gserviceaccount.com"
-            }
-        ).execute()
-        print(f"✅ MT006: تم مشاركة الشيت مع Service Account")
+        # ملاحظة: لا حاجة لاستدعاء permissions().create() هنا —
+        # الملف أصلاً داخل الـ Shared Drive والـ Service Account
+        # عضو فيه بالفعل (كما هو مؤكد من نجاح MT007 سابقًا).
 
         return sheet_name, spreadsheet_id
 
+    except HttpError as e:
+        print(f"❌ MT006 (HttpError): {e}")
+        return None, None
     except Exception as e:
         print(f"❌ MT006: {e}")
         return None, None
@@ -498,7 +515,8 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
-            }
+            "driveId": SHARED_DRIVE_ID,
+        }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
             body=file_metadata,
@@ -538,10 +556,7 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="drive",
-            driveId=SHARED_DRIVE_ID
+            supportsAllDrives=True
         ).execute()
         folders = res.get("files", [])
         if not folders:
@@ -553,10 +568,7 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
             q=query2,
             fields="files(id, name, webViewLink, createdTime)",
             orderBy="createdTime desc",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="drive",
-            driveId=SHARED_DRIVE_ID
+            supportsAllDrives=True
         ).execute()
 
         files = []
