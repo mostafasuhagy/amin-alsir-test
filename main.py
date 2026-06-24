@@ -150,7 +150,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     print(f"🆔 CHAT ID: {chat_id}")
 
-    # ── التحقق من Deep Link (تسجيل عميل أو مساعد) ──
+    # ── التحقق من Deep Link (تسجيل عميل أو مساعد أو اختيار باقة) ──
     args = context.args
     if args:
         param = args[0]
@@ -213,7 +213,43 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ كود المساعد غير صحيح. تواصل مع المكتب.")
             return
 
-    # ── التحقق من الاشتراك ──
+        # ── اختيار باقة من صفحة الهبوط (شهري/سنوي) ──
+        # 🆕 الرابط الجاي من index.html شكله: ?start=plan_monthly أو ?start=plan_yearly
+        elif param.startswith("plan_"):
+            billing_cycle = param.replace("plan_", "")
+            if billing_cycle not in ("monthly", "yearly"):
+                billing_cycle = "monthly"
+
+            context.user_data["selected_billing_cycle"] = billing_cycle
+            cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"
+
+            tenant = MT001(chat_id)
+            if tenant and tenant.get("status") == "active":
+                office_name = tenant.get("office_name", "المكتب")
+                country = tenant.get("country", "مصر")
+                context.user_data["tenant"] = tenant
+                await update.message.reply_text(
+                    f"أهلاً بك مجدداً في *أمين السر* 🏛️\n\n"
+                    f"🏢 {office_name}\n"
+                    f"🌍 {country}\n\n"
+                    f"اختر من لوحة القيادة:",
+                    parse_mode="Markdown",
+                    reply_markup=main_keyboard()
+                )
+            else:
+                context.user_data["routine"] = "REG"
+                context.user_data["step"] = "office_name"
+                context.user_data["data"] = {}
+                await update.message.reply_text(
+                    f"🏛️ *أهلاً بك في أمين السر!*\n\n"
+                    f"✅ تم تسجيل اختيارك: *الباقة {cycle_label}*\n\n"
+                    f"نظام إدارة مكتب المحاماة للوطن العربي 🌍\n\n"
+                    f"للبدء، أدخل *اسم مكتبك*:",
+                    parse_mode="Markdown"
+                )
+            return
+
+    # ── التحقق من الاشتراك (الحالة العادية، بدون Deep Link) ──
     tenant = MT001(chat_id)
 
     if tenant and tenant.get("status") == "active":
