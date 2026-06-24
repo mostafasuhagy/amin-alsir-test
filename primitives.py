@@ -131,22 +131,46 @@ def MT006(office_name, tenant_code):
 
         sheet_name = f"amin_alsir_{tenant_code}"
 
-        spreadsheet = sheets_service.spreadsheets().create(body={
-            "properties": {"title": sheet_name},
-            "sheets": [
-                {"properties": {"title": "Clients"}},
-                {"properties": {"title": "Topics"}},
-                {"properties": {"title": "Events"}},
-                {"properties": {"title": "Documents"}},
-                {"properties": {"title": "Shipments"}},
-                {"properties": {"title": "Custody"}},
-                {"properties": {"title": "Assistants"}},
-                {"properties": {"title": "Notifications"}},
-                {"properties": {"title": "Services"}},
-            ]
-        }).execute()
+        # FIXED: create the file via Drive API directly inside the Shared Drive.
+        # The old approach (sheets_service.spreadsheets().create()) fails with
+        # HttpError 403 because the Service Account has no storage quota of
+        # its own to own newly created Sheets files.
+        file_metadata = {
+            "name": sheet_name,
+            "mimeType": "application/vnd.google-apps.spreadsheet",
+            "parents": [SHARED_DRIVE_ID],
+        }
+        new_file = drive_service.files().create(
+            body=file_metadata,
+            fields="id",
+            supportsAllDrives=True,
+        ).execute()
+        spreadsheet_id = new_file.get("id")
+        print(f"DONE: MT006 - spreadsheet file created in Shared Drive ({spreadsheet_id})")
 
-        spreadsheet_id = spreadsheet["spreadsheetId"]
+        # Add all required tabs via Sheets API batchUpdate
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": [
+                {"addSheet": {"properties": {"title": "Clients"}}},
+                {"addSheet": {"properties": {"title": "Topics"}}},
+                {"addSheet": {"properties": {"title": "Events"}}},
+                {"addSheet": {"properties": {"title": "Documents"}}},
+                {"addSheet": {"properties": {"title": "Shipments"}}},
+                {"addSheet": {"properties": {"title": "Custody"}}},
+                {"addSheet": {"properties": {"title": "Assistants"}}},
+                {"addSheet": {"properties": {"title": "Notifications"}}},
+                {"addSheet": {"properties": {"title": "Services"}}},
+            ]}
+        ).execute()
+
+        # Remove the default "Sheet1" tab that Drive auto-creates with every new spreadsheet
+        spreadsheet_info = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        default_sheet_id = spreadsheet_info["sheets"][0]["properties"]["sheetId"]
+        sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body={"requests": [{"deleteSheet": {"sheetId": default_sheet_id}}]}
+        ).execute()
         print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
 
         headers_data = [
