@@ -154,6 +154,7 @@ def MT006(office_name, tenant_code):
 
         # 1) إنشاء الملف الفاضي عبر Drive API داخل الـ Shared Drive
         #    (نفس نمط MT007 الناجح بالضبط)
+        print(f"🔎 MT006 STEP1: about to call drive_service.files().create() — sheet_name={sheet_name}")
         file_metadata = {
             "name":     sheet_name,
             "mimeType": "application/vnd.google-apps.spreadsheet",
@@ -165,15 +166,17 @@ def MT006(office_name, tenant_code):
             supportsAllDrives=True,
         ).execute()
         spreadsheet_id = drive_file.get("id")
-        print(f"✅ MT006: تم إنشاء ملف Spreadsheet عبر Drive API — {sheet_name} ({spreadsheet_id})")
+        print(f"✅ MT006 STEP1 OK: تم إنشاء ملف Spreadsheet عبر Drive API — {sheet_name} ({spreadsheet_id})")
 
         # 2) إعادة تسمية التبويب الافتراضي (Sheet1) إلى أول تبويب مطلوب،
         #    ثم إضافة باقي التبويبات بعده — كل ذلك عبر batchUpdate واحد
+        print(f"🔎 MT006 STEP2: about to call sheets_service.spreadsheets().get() — spreadsheet_id={spreadsheet_id}")
         default_sheet = sheets_service.spreadsheets().get(
             spreadsheetId=spreadsheet_id,
             fields="sheets.properties",
         ).execute()
         default_sheet_id = default_sheet["sheets"][0]["properties"]["sheetId"]
+        print(f"✅ MT006 STEP2 OK: default_sheet_id={default_sheet_id}")
 
         requests = [
             {
@@ -186,13 +189,15 @@ def MT006(office_name, tenant_code):
         for title in tab_titles[1:]:
             requests.append({"addSheet": {"properties": {"title": title}}})
 
+        print(f"🔎 MT006 STEP3: about to call spreadsheets().batchUpdate() — spreadsheet_id={spreadsheet_id}")
         sheets_service.spreadsheets().batchUpdate(
             spreadsheetId=spreadsheet_id,
             body={"requests": requests},
         ).execute()
-        print(f"✅ MT006: تم إنشاء/تسمية كل الـ tabs ({', '.join(tab_titles)})")
+        print(f"✅ MT006 STEP3 OK: تم إنشاء/تسمية كل الـ tabs ({', '.join(tab_titles)})")
 
         # 3) إضافة الهيدرز لكل تبويب
+        print(f"🔎 MT006 STEP4: about to call values().batchUpdate() for headers")
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
             {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
