@@ -1151,9 +1151,19 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data.startswith("COUNTRY-"):
         country = data.replace("COUNTRY-", "")
         office_name = context.user_data.get("data", {}).get("office_name", "")
-        sheet_name = "amin_alsir_cases_new_V2"
 
-        code = MT002(chat_id, office_name, country, chat_id, sheet_name)
+        # NEW: create a dedicated Sheet + Drive folder for this new tenant
+        sheet_name, sheet_id = MT006(office_name, str(chat_id))
+        folder_id = MT007(str(chat_id))
+
+        if not sheet_name or not folder_id:
+            print(f"FAIL: tenant resources not created for chat_id={chat_id} (sheet_name={sheet_name}, folder_id={folder_id})")
+            await query.edit_message_text(
+                "حدث خطأ في إنشاء الموارد الخاصة بمكتبك. حاول مرة أخرى لاحقاً."
+            )
+            return
+
+        code = MT002(chat_id, office_name, country, chat_id, sheet_name, folder_id)
         if code:
             tenant = MT001(chat_id)
             context.user_data.clear()
