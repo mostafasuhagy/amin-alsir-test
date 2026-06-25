@@ -258,6 +258,16 @@ def get_boss_id(context):
             pass
     return BOSS_CHAT_ID
 
+def get_tenant_sheet(context):
+    """
+    إرجاع sheet_name الخاص بمكتب المستخدم الحالي (Tenant) من context.user_data.
+    لو لأي سبب غير متوفر (مثلاً حالة قديمة أو خطأ غير متوقع)، يرجع SHEET_NAME
+    الافتراضي (شيت مستر جمال Of-001) كـ fallback آمن بدل ما يفشل الكود بالكامل.
+    """
+    tenant = context.user_data.get("tenant", {})
+    sheet_name = tenant.get("sheet_name", "")
+    return sheet_name if sheet_name else SHEET_NAME
+
 # ═══════════════════════════════════════
 # لوحات القيادة
 # ═══════════════════════════════════════
@@ -359,14 +369,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         param = args[0]
 
         # ── تسجيل عميل ──
+        # شكل الرابط: client_{tenant_code}_{ref_code} — مثال: client_Of-005_Cl-003
         if param.startswith("client_"):
-            ref_code = param.replace("client_", "")
-            client = P002("Clients", ref_code)
+            parts = param.replace("client_", "").split("_")
+            if len(parts) < 2:
+                await update.message.reply_text("❌ رابط غير صحيح. تواصل مع المكتب.")
+                return
+            tenant_code, ref_code = parts[0], "_".join(parts[1:])
+
+            tenant_row = P002("Tenants", tenant_code, TENANTS_SHEET)
+            if not tenant_row:
+                await update.message.reply_text("❌ المكتب غير موجود. تواصل مع المكتب.")
+                return
+            sheet_name = tenant_row.get("sheet_name", "")
+            boss_id = tenant_row.get("boss_chat_id", "") or BOSS_CHAT_ID
+
+            client = P002("Clients", ref_code, sheet_name)
             if client:
-                records = P005("Clients")
+                records = P005("Clients", sheet_name)
                 for i, r in enumerate(records, start=2):
                     if str(list(r.values())[0]).strip().lower() == str(ref_code).strip().lower():
-                        P004("Clients", i, 8, str(chat_id))
+                        P004("Clients", i, 8, str(chat_id), sheet_name)
                         break
                 await update.message.reply_text(
                     f"✅ *تم ربط حسابك بنجاح!*\n\n"
@@ -376,7 +399,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
                 await context.bot.send_message(
-                    chat_id=BOSS_CHAT_ID,
+                    chat_id=boss_id,
                     text=f"🔔 *إشعار — أمين السر*\n\n📱 عميل ربط حسابه بالبوت\n👤 {client.get('client_name','')}\n🔹 {ref_code}",
                     parse_mode="Markdown"
                 )
@@ -385,14 +408,27 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         # ── تسجيل مساعد ──
+        # شكل الرابط: assistant_{tenant_code}_{ref_code} — مثال: assistant_Of-005_As-002
         elif param.startswith("assistant_"):
-            ref_code = param.replace("assistant_", "")
-            assistant = P002("Assistants", ref_code)
+            parts = param.replace("assistant_", "").split("_")
+            if len(parts) < 2:
+                await update.message.reply_text("❌ رابط غير صحيح. تواصل مع المكتب.")
+                return
+            tenant_code, ref_code = parts[0], "_".join(parts[1:])
+
+            tenant_row = P002("Tenants", tenant_code, TENANTS_SHEET)
+            if not tenant_row:
+                await update.message.reply_text("❌ المكتب غير موجود. تواصل مع المكتب.")
+                return
+            sheet_name = tenant_row.get("sheet_name", "")
+            boss_id = tenant_row.get("boss_chat_id", "") or BOSS_CHAT_ID
+
+            assistant = P002("Assistants", ref_code, sheet_name)
             if assistant:
-                records = P005("Assistants")
+                records = P005("Assistants", sheet_name)
                 for i, r in enumerate(records, start=2):
                     if str(list(r.values())[0]).strip().lower() == str(ref_code).strip().lower():
-                        P004("Assistants", i, 6, str(chat_id))
+                        P004("Assistants", i, 6, str(chat_id), sheet_name)
                         break
                 await update.message.reply_text(
                     f"✅ *تم ربط حسابك بنجاح!*\n\n"
@@ -559,11 +595,24 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ العنوان قصير:")
                 return
             data["address"] = text
-            code = G001("Cl", "Clients")
-            ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M")])
+            sheet_name = get_tenant_sheet(context)
+            tenant_code = context.user_data.get("tenant", {}).get("tenant_code", "")
+            code = G001("Cl", "Clients", sheet_name)
+            ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
-                await T002(context, chat_id, f"✅ *تم إضافة العميل!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n📱 {data['mobile']}", back_btn)
+                client_link = f"https://t.me/amin_alsir_bot?start=client_{tenant_code}_{code}"
+                share_text = f"رابط ربط حسابك بمكتبنا على أمين السر:\n{client_link}"
+                share_url = f"https://t.me/share/url?url={client_link}&text={share_text}"
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"✅ *تم إضافة العميل!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n📱 {data['mobile']}",
+                    parse_mode="Markdown",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📤 مشاركة الرابط مع العميل", url=share_url)],
+                        [InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")],
+                    ])
+                )
                 await N001(context, get_boss_id(context), f"👤 عميل جديد: {data['name']}\n🔹 الكود: {code}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
@@ -571,7 +620,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── F002 عرض بيانات عميل ───
     elif routine == "F002":
         if step == "code":
-            client = P002("Clients", text)
+            sheet_name = get_tenant_sheet(context)
+            client = P002("Clients", text, sheet_name)
             context.user_data.clear()
             if not client:
                 await T002(context, chat_id, "❌ كود العميل غير موجود.", back_btn)
@@ -590,7 +640,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── F003 تعديل بيانات عميل ───
     elif routine == "F003":
         if step == "code":
-            client = P002("Clients", text)
+            sheet_name = get_tenant_sheet(context)
+            client = P002("Clients", text, sheet_name)
             if not client:
                 await T002(context, chat_id, "❌ كود العميل غير موجود.", back_btn)
                 context.user_data.clear()
@@ -611,11 +662,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ الاسم قصير:")
                 return
+            sheet_name = get_tenant_sheet(context)
             client_code = data.get("client_code")
-            records = P005("Clients")
+            records = P005("Clients", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(client_code):
-                    P004("Clients", i, 2, text)
+                    P004("Clients", i, 2, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تعديل الاسم!*\n\n👤 {text}", back_btn)
@@ -624,11 +676,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V003(text):
                 await T001(context, chat_id, "❌ رقم الموبايل غير صحيح:")
                 return
+            sheet_name = get_tenant_sheet(context)
             client_code = data.get("client_code")
-            records = P005("Clients")
+            records = P005("Clients", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(client_code):
-                    P004("Clients", i, 4, text)
+                    P004("Clients", i, 4, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تعديل الموبايل!*\n\n📱 {text}", back_btn)
@@ -637,11 +690,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ العنوان قصير:")
                 return
+            sheet_name = get_tenant_sheet(context)
             client_code = data.get("client_code")
-            records = P005("Clients")
+            records = P005("Clients", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(client_code):
-                    P004("Clients", i, 5, text)
+                    P004("Clients", i, 5, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تعديل العنوان!*\n\n🏠 {text}", back_btn)
@@ -665,11 +719,24 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ رقم غير صحيح:")
                 return
             data["mobile"] = text
-            code = G001("As", "Assistants")
-            ok = P003("Assistants", [code, data["name"], data["bar_number"], data["mobile"], datetime.now().strftime("%Y-%m-%d %H:%M")])
+            sheet_name = get_tenant_sheet(context)
+            tenant_code = context.user_data.get("tenant", {}).get("tenant_code", "")
+            code = G001("As", "Assistants", sheet_name)
+            ok = P003("Assistants", [code, data["name"], data["bar_number"], data["mobile"], datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
-                await T002(context, chat_id, f"✅ *تم إضافة المساعد!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n🔢 {data['bar_number']}\n📱 {data['mobile']}", back_btn)
+                assistant_link = f"https://t.me/amin_alsir_bot?start=assistant_{tenant_code}_{code}"
+                share_text = f"رابط ربط حسابك كمساعد بمكتبنا على أمين السر:\n{assistant_link}"
+                share_url = f"https://t.me/share/url?url={assistant_link}&text={share_text}"
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=f"✅ *تم إضافة المساعد!*\n\n🔹 الكود: `{code}`\n👤 {data['name']}\n🔢 {data['bar_number']}\n📱 {data['mobile']}",
+                    parse_mode="Markdown",
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("📤 مشاركة الرابط مع المساعد", url=share_url)],
+                        [InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")],
+                    ])
+                )
                 await N001(context, get_boss_id(context), f"👥 مساعد جديد: {data['name']}\n🔹 الكود: {code}")
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
@@ -677,7 +744,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RA002 عرض بيانات مساعد ───
     elif routine == "RA002":
         if step == "code":
-            assistant = P002("Assistants", text)
+            sheet_name = get_tenant_sheet(context)
+            assistant = P002("Assistants", text, sheet_name)
             context.user_data.clear()
             if not assistant:
                 await T002(context, chat_id, "❌ كود المساعد غير موجود.", back_btn)
@@ -695,7 +763,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RT001 إضافة موضوع ───
     elif routine == "RT001":
         if step == "client_code":
-            client = P002("Clients", text)
+            sheet_name = get_tenant_sheet(context)
+            client = P002("Clients", text, sheet_name)
             if not client:
                 await T001(context, chat_id, "❌ كود العميل غير موجود:")
                 return
@@ -712,8 +781,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, "📋 أدخل *نوع الموضوع* (مثال: طلاق / ميراث / عقار):", cancel_btn)
         elif step == "event_type":
             data["event_type"] = text
-            code = G001("Tp", "Topics")
-            ok = P003("Topics", [code, data["client_code"], data["client_name"], data["title"], data["event_type"], "جديد", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            sheet_name = get_tenant_sheet(context)
+            code = G001("Tp", "Topics", sheet_name)
+            ok = P003("Topics", [code, data["client_code"], data["client_name"], data["title"], data["event_type"], "جديد", datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}\n👤 {data['client_name']}", back_btn)
@@ -724,7 +794,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RT002 عرض موضوعات عميل ───
     elif routine == "RT002":
         if step == "client_code":
-            topics = P006("Topics", "client_code", text)
+            sheet_name = get_tenant_sheet(context)
+            topics = P006("Topics", "client_code", text, sheet_name)
             context.user_data.clear()
             if not topics:
                 await T002(context, chat_id, "❌ لا توجد موضوعات لهذا العميل.", back_btn)
@@ -737,7 +808,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RT003 تغيير حالة موضوع ───
     elif routine == "RT003":
         if step == "topic_code":
-            topic = P002("Topics", text)
+            sheet_name = get_tenant_sheet(context)
+            topic = P002("Topics", text, sheet_name)
             if not topic:
                 await T002(context, chat_id, "❌ كود الموضوع غير موجود.", back_btn)
                 context.user_data.clear()
@@ -759,7 +831,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RT004 أرشفة موضوع ───
     elif routine == "RT004":
         if step == "topic_code":
-            topic = P002("Topics", text)
+            sheet_name = get_tenant_sheet(context)
+            topic = P002("Topics", text, sheet_name)
             if not topic:
                 await T002(context, chat_id, "❌ كود الموضوع غير موجود.", back_btn)
                 context.user_data.clear()
@@ -809,8 +882,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, "📍 أدخل *مكان الحدث*:", cancel_btn)
         elif step == "location":
             data["location"] = text
-            code = G001("Ev", "Events")
-            ok = P003("Events", [code, data["event_date"], data["topic_code"], data["client_name"], data["event_type"], data["event_time"], data["location"]])
+            sheet_name = get_tenant_sheet(context)
+            code = G001("Ev", "Events", sheet_name)
+            ok = P003("Events", [code, data["event_date"], data["topic_code"], data["client_name"], data["event_type"], data["event_time"], data["location"]], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم إضافة الحدث!*\n\n🔹 الكود: `{code}`\n📅 {data['event_date']} — {data['event_type']}\n📍 {data['location']}", back_btn)
@@ -821,7 +895,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RE002 نتيجة حدث ───
     elif routine == "RE002":
         if step == "event_code":
-            event = P002("Events", text)
+            sheet_name = get_tenant_sheet(context)
+            event = P002("Events", text, sheet_name)
             if not event:
                 await T001(context, chat_id, "❌ كود الحدث غير موجود:")
                 return
@@ -835,11 +910,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ النتيجة قصيرة:")
                 return
             data["result"] = text
-            records = P005("Events")
+            sheet_name = get_tenant_sheet(context)
+            records = P005("Events", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["event_code"]):
-                    P004("Events", i, 8, text)
-                    P004("Events", i, 9, "منتهي")
+                    P004("Events", i, 8, text, sheet_name)
+                    P004("Events", i, 9, "منتهي", sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل النتيجة!*\n\n📝 {data['result']}", back_btn)
@@ -847,7 +923,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RS001 إرسال مرفقات ───
     elif routine == "RS001":
         if step == "topic_code":
-            topic = P002("Topics", text)
+            sheet_name = get_tenant_sheet(context)
+            topic = P002("Topics", text, sheet_name)
             if not topic:
                 await T001(context, chat_id, "❌ كود الموضوع غير موجود:")
                 return
@@ -859,12 +936,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ الوصف قصير:")
                 return
             data["description"] = text
-            code = G001("Sh", "Shipments")
+            sheet_name = get_tenant_sheet(context)
+            code = G001("Sh", "Shipments", sheet_name)
             ok = P003("Shipments", [
                 code, data["topic_code"], data["description"],
                 "", datetime.now().strftime("%Y-%m-%d %H:%M"),
                 "", "", "", "صادر",
-            ])
+            ], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم تسجيل الشحنة!*\n\n🔹 الكود: `{code}`\n📦 {data['description']}", back_btn)
@@ -874,17 +952,18 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RS002 استلام شحنة ───
     elif routine == "RS002":
         if step == "shipment_code":
-            shipment = P002("Shipments", text)
+            sheet_name = get_tenant_sheet(context)
+            shipment = P002("Shipments", text, sheet_name)
             if not shipment:
                 await T002(context, chat_id, "❌ رقم الشحنة غير موجود.", back_btn)
                 context.user_data.clear()
                 return
             data["shipment_code"] = text
-            records = P005("Shipments")
+            records = P005("Shipments", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Shipments", i, 9, "مستلم")
-                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"))
+                    P004("Shipments", i, 9, "مستلم", sheet_name)
+                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل استلام الشحنة!*\n\n🔹 الكود: `{text}`\n📦 {shipment.get('sender','—')}", back_btn)
@@ -892,7 +971,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RS003 تتبع شحنة ───
     elif routine == "RS003":
         if step == "shipment_code":
-            shipment = P002("Shipments", text)
+            sheet_name = get_tenant_sheet(context)
+            shipment = P002("Shipments", text, sheet_name)
             context.user_data.clear()
             if not shipment:
                 await T002(context, chat_id, "❌ رقم الشحنة غير موجود.", back_btn)
@@ -921,8 +1001,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ الوصف قصير:")
                 return
             data["description"] = text
-            code = G001("Doc", "Documents")
-            ok = P003("Documents", [code, data["entity"], data["description"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            sheet_name = get_tenant_sheet(context)
+            code = G001("Doc", "Documents", sheet_name)
+            ok = P003("Documents", [code, data["entity"], data["description"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم تسجيل الطلب!*\n\n🔹 الكود: `{code}`\n📄 من: {data['entity']}", back_btn)
@@ -932,15 +1013,16 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RD003 الموافقة على مستند ───
     elif routine == "RD003":
         if step == "doc_code":
-            doc = P002("Documents", text)
+            sheet_name = get_tenant_sheet(context)
+            doc = P002("Documents", text, sheet_name)
             if not doc:
                 await T002(context, chat_id, "❌ كود المستند غير موجود.", back_btn)
                 context.user_data.clear()
                 return
-            records = P005("Documents")
+            records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Documents", i, 6, "موافق عليه")
+                    P004("Documents", i, 6, "موافق عليه", sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
@@ -949,7 +1031,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RD004 رفض مستند ───
     elif routine == "RD004":
         if step == "doc_code":
-            doc = P002("Documents", text)
+            sheet_name = get_tenant_sheet(context)
+            doc = P002("Documents", text, sheet_name)
             if not doc:
                 await T002(context, chat_id, "❌ كود المستند غير موجود.", back_btn)
                 context.user_data.clear()
@@ -962,11 +1045,12 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ السبب قصير:")
                 return
-            records = P005("Documents")
+            sheet_name = get_tenant_sheet(context)
+            records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["doc_code"]):
-                    P004("Documents", i, 6, "مرفوض")
-                    P004("Documents", i, 7, text)
+                    P004("Documents", i, 6, "مرفوض", sheet_name)
+                    P004("Documents", i, 7, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n🔹 الكود: `{data['doc_code']}`\n📝 السبب: {text}", back_btn)
@@ -975,7 +1059,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RD005 عرض مستندات موضوع ───
     elif routine == "RD005":
         if step == "topic_code":
-            docs = P006("Documents", "topic_code", text)
+            sheet_name = get_tenant_sheet(context)
+            docs = P006("Documents", "topic_code", text, sheet_name)
             context.user_data.clear()
             if not docs:
                 await T002(context, chat_id, "❌ لا توجد مستندات لهذا الموضوع.", back_btn)
@@ -994,7 +1079,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RD006 أرشفة مستندات ───
     elif routine == "RD006":
         if step == "topic_code":
-            docs = P006("Documents", "topic_code", text)
+            sheet_name = get_tenant_sheet(context)
+            docs = P006("Documents", "topic_code", text, sheet_name)
             if not docs:
                 await T002(context, chat_id, "❌ لا توجد مستندات لهذا الموضوع.", back_btn)
                 context.user_data.clear()
@@ -1024,8 +1110,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ السبب قصير:")
                 return
             data["reason"] = text
-            code = G001("Fn", "Custody")
-            ok = P003("Custody", [code, data["amount"], data["reason"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")])
+            sheet_name = get_tenant_sheet(context)
+            code = G001("Fn", "Custody", sheet_name)
+            ok = P003("Custody", [code, data["amount"], data["reason"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم طلب العهدة!*\n\n🔹 الكود: `{code}`\n💰 {data['amount']} جنيه\n📝 {data['reason']}", back_btn)
@@ -1036,7 +1123,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RM002 تسوية عهدة ───
     elif routine == "RM002":
         if step == "fund_code":
-            fund = P002("Custody", text)
+            sheet_name = get_tenant_sheet(context)
+            fund = P002("Custody", text, sheet_name)
             if not fund:
                 await T002(context, chat_id, "❌ كود العهدة غير موجود.", back_btn)
                 context.user_data.clear()
@@ -1047,12 +1135,13 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"💰 العهدة: {data['amount']} جنيه\n\n📝 أدخل *ملاحظات التسوية*:", cancel_btn)
         elif step == "notes":
             data["notes"] = text
-            records = P005("Custody")
+            sheet_name = get_tenant_sheet(context)
+            records = P005("Custody", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["fund_code"]):
-                    P004("Custody", i, 4, "مسوّاة")
-                    P004("Custody", i, 6, text)
-                    P004("Custody", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"))
+                    P004("Custody", i, 4, "مسوّاة", sheet_name)
+                    P004("Custody", i, 6, text, sheet_name)
+                    P004("Custody", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسوية العهدة!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 {data['amount']} جنيه", back_btn)
@@ -1070,7 +1159,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RN002 إشعار للعميل ───
     elif routine == "RN002":
         if step == "client_code":
-            client = P002("Clients", text)
+            sheet_name = get_tenant_sheet(context)
+            client = P002("Clients", text, sheet_name)
             if not client:
                 await T002(context, chat_id, "❌ كود العميل غير موجود.", back_btn)
                 context.user_data.clear()
@@ -1096,7 +1186,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RN003 إشعار للمساعد ───
     elif routine == "RN003":
         if step == "assistant_code":
-            assistant = P002("Assistants", text)
+            sheet_name = get_tenant_sheet(context)
+            assistant = P002("Assistants", text, sheet_name)
             if not assistant:
                 await T002(context, chat_id, "❌ كود المساعد غير موجود.", back_btn)
                 context.user_data.clear()
@@ -1122,7 +1213,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ─── RD001 رفع مستند وارد ───
     elif routine == "RD001":
         if step == "topic_code":
-            topic = P002("Topics", text)
+            sheet_name = get_tenant_sheet(context)
+            topic = P002("Topics", text, sheet_name)
             if not topic:
                 await T001(context, chat_id, "❌ كود الموضوع غير موجود:")
                 return
@@ -1241,12 +1333,13 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ─── أرشفة مستندات موضوع ───
     if data == "ARCHIVE-DOCS-CONFIRM":
+        sheet_name = get_tenant_sheet(context)
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
         if topic_code:
-            records = P005("Documents")
+            records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(r.get("topic_code", "")) == str(topic_code):
-                    P004("Documents", i, 6, "مؤرشف")
+                    P004("Documents", i, 6, "مؤرشف", sheet_name)
         context.user_data.clear()
         await query.edit_message_text(
             f"✅ تم أرشفة مستندات الموضوع `{topic_code}`",
@@ -1258,14 +1351,15 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ─── أرشفة موضوع ───
     if data == "ARCHIVE-CONFIRM":
+        sheet_name = get_tenant_sheet(context)
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
         topic_name = context.user_data.get("data", {}).get("topic_name", "")
         if topic_code:
-            records = P005("Topics")
+            records = P005("Topics", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(topic_code):
-                    P004("Topics", i, 6, "مؤرشف")
-                    P004("Topics", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"))
+                    P004("Topics", i, 6, "مؤرشف", sheet_name)
+                    P004("Topics", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)
                     break
         context.user_data.clear()
         await query.edit_message_text(
@@ -1277,13 +1371,14 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if data.startswith("STATUS-"):
+        sheet_name = get_tenant_sheet(context)
         new_status = data.replace("STATUS-", "")
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
         if topic_code:
-            records = P005("Topics")
+            records = P005("Topics", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(topic_code):
-                    P004("Topics", i, 6, new_status)
+                    P004("Topics", i, 6, new_status, sheet_name)
                     break
         context.user_data.clear()
         await query.edit_message_text(
@@ -1364,8 +1459,10 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 tmp_path = tmp.name
             await tg_file.download_to_drive(tmp_path)
 
+            sheet_name = get_tenant_sheet(context)
+            folder_id = context.user_data.get("tenant", {}).get("drive_folder_id", "") or DRIVE_FOLDER_ID
             topic_code = data.get("topic_code", "GENERAL")
-            drive_link = DRV001(tmp_path, file_name, topic_code)
+            drive_link = DRV001(tmp_path, file_name, topic_code, folder_id)
             os.unlink(tmp_path)
 
             if not drive_link:
@@ -1373,12 +1470,12 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
 
-            code = G001("Doc", "Documents")
+            code = G001("Doc", "Documents", sheet_name)
             P003("Documents", [
                 code, topic_code, data.get("doc_name", file_name),
                 file_name, drive_link, "وارد", "TRANSIT",
                 datetime.now().strftime("%Y-%m-%d %H:%M")
-            ])
+            ], sheet_name)
 
             context.user_data.clear()
             await T002(context, chat_id,
