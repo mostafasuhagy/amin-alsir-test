@@ -235,8 +235,14 @@ body{font-family:var(--font);background:var(--yellow);color:var(--navy);min-heig
   </div>
 </div>
 <script>
-const SHEET_ID='1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxnG2ZiPHn0Uw7Nz9Z9EoJZ1nRUbHhImtrhlxEVNYd2SkX0l_W3JGYLygVedw21Ofuc/exec';
+function getSheetIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const sid = params.get('sid');
+    if (sid) { localStorage.setItem('assistantSheetId', sid); return sid; }
+    return localStorage.getItem('assistantSheetId') || '1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk';
+}
+const SHEET_ID=getSheetIdFromUrl();
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbymzKVmGgxqgJBFVf91HGzieUsNJQtEU9E1xu97Jkb73Q9VxycorCXDca1laq3Uwdfw/exec';
 function getAssistantCode() {
     const params = new URLSearchParams(window.location.search);
     const token = params.get('t');
@@ -263,7 +269,7 @@ function renderAllEvents(){const container=document.getElementById('allEventsLis
 function renderTopics(filter=''){const container=document.getElementById('topicsList');const list=filter?allTopics.filter(t=>t.service_name?.includes(filter)||t.topic_code?.includes(filter)):allTopics;if(!list.length){container.innerHTML='<div class="empty-state"><div class="icon">📋</div><p>لا توجد موضوعات</p></div>';return;}const sc={'جديد':'status-new','قيد النظر':'status-active','منتهي':'status-closed','مؤرشف':'status-closed'};container.innerHTML=list.map(t=>`<div class="data-item"><div class="data-item-info"><div class="name">${t.service_name||'—'}</div><div class="code">${t.topic_code||''}</div><div class="meta">👤 ${t.client_name||'—'}</div></div><span class="data-item-status ${sc[t.status]||'status-new'}">${t.status||'جديد'}</span></div>`).join('');}
 function filterTopics(){renderTopics(document.getElementById('topicSearch').value.trim());}
 function openCloseWO(code){document.getElementById('closeWOCode').value=code;openModal('closeWO');}
-async function postToSheet(sheet,row){try{await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({sheet,row})});return true;}catch(e){return false;}}
+async function postToSheet(sheet,row){try{await fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({sheet,row,sheet_id:SHEET_ID})});return true;}catch(e){return false;}}
 async function saveEvent(){const topic=document.getElementById('evTopic').value.trim();const client=document.getElementById('evClient').value.trim();const type=document.getElementById('evType').value.trim();const date=document.getElementById('evDate').value;const time=document.getElementById('evTime').value;const location=document.getElementById('evLocation').value.trim();if(!topic||!client||!type||!date){showToast('❌ يرجى ملء الحقول المطلوبة',true);return;}closeModal('addEvent');const now=new Date().toLocaleDateString('en-CA');await postToSheet('Events',['',topic,client,type,date,time,location,'قادم',now,'']);showToast('✅ تم حفظ الحدث بنجاح!');['evTopic','evClient','evType','evDate','evTime','evLocation'].forEach(id=>document.getElementById(id).value='');setTimeout(loadAllData,2000);}
 async function submitCloseWO(){const code=document.getElementById('closeWOCode').value.trim();const report=document.getElementById('closeWOReport').value.trim();if(!code||!report){showToast('❌ يرجى ملء جميع الحقول',true);return;}closeModal('closeWO');showToast('✅ تم إغلاق أمر الشغل!');['closeWOCode','closeWOReport'].forEach(id=>document.getElementById(id).value='');}
 function showSection(name){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));const sec=document.getElementById('sec-'+name);const nav=document.getElementById('nav-'+name);if(sec)sec.classList.add('active');if(nav)nav.classList.add('active');window.scrollTo(0,0);}
