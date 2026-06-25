@@ -1163,23 +1163,74 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        code = MT002(chat_id, office_name, country, chat_id, sheet_name, folder_id)
+        # ── تحديد حالة التسجيل: trial أم pending_payment ──
+        # لو المستخدم جاي من كارت باقة محددة (plan_monthly / plan_yearly) هتكون
+        # selected_billing_cycle موجودة في user_data (اتسجلت في دالة start()).
+        # لو جاي من "ابدأ الآن مجاناً" هتكون غير موجودة، فالحالة الافتراضية trial.
+        billing_cycle = context.user_data.get("selected_billing_cycle", "")
+        if billing_cycle:
+            initial_status = "pending_payment"
+        else:
+            initial_status = "trial"
+
+        code = MT002(
+            chat_id, office_name, country, chat_id, sheet_name, folder_id,
+            status=initial_status, billing_cycle=billing_cycle,
+        )
+
         if code:
             tenant = MT001(chat_id)
             context.user_data.clear()
             context.user_data["tenant"] = tenant
-            await query.edit_message_text(
-                f"✅ *تم تسجيل مكتبك بنجاح!*\n\n"
-                f"🏢 {office_name}\n"
-                f"🌍 {country}\n"
-                f"🔹 الكود: `{code}`\n\n"
-                f"اختر من لوحة القيادة:",
-                parse_mode="Markdown",
-                reply_markup=main_keyboard()
-            )
+
+            if initial_status == "pending_payment":
+                # توليد رابط دفع Paymob فعلي مباشر (بدون أي صفحة وسيطة)
+                pay_link = create_payment_link(code, billing_cycle, office_name)
+                cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"
+
+                if pay_link:
+                    await query.edit_message_text(
+                        f"✅ *تم تسجيل مكتبك بنجاح!*\n\n"
+                        f"🏢 {office_name}\n"
+                        f"🌍 {country}\n"
+                        f"🔹 الكود: `{code}`\n"
+                        f"📦 الباقة المختارة: {cycle_label}\n\n"
+                        f"للمتابعة، يرجى إكمال الدفع عبر الرابط التالي:\n"
+                        f"🔗 {pay_link}\n\n"
+                        f"بعد إتمام الدفع بنجاح، سيتم تفعيل حسابك فوراً وتلقائياً.",
+                        parse_mode="Markdown",
+                    )
+                else:
+                    # فشل توليد رابط الدفع — نوضح للعميل ونوجهه لإعادة المحاولة
+                    await query.edit_message_text(
+                        f"✅ تم تسجيل مكتبك بنجاح (الكود: `{code}`)\n\n"
+                        f"⚠️ حدث خطأ مؤقت في توليد رابط الدفع. "
+                        f"يرجى المحاولة مرة أخرى من خلال الأمر /pay أو التواصل مع الدعم.",
+                        parse_mode="Markdown",
+                    )
+            else:
+                # trial — يستخدم البوت بالكامل لمدة TRIAL_DAYS أيام
+                await query.edit_message_text(
+                    f"✅ *تم تسجيل مكتبك بنجاح!*\n\n"
+                    f"🏢 {office_name}\n"
+                    f"🌍 {country}\n"
+                    f"🔹 الكود: `{code}`\n\n"
+                    f"🎁 لديك *{TRIAL_DAYS} أيام مجانية* لتجربة النظام بالكامل.\n\n"
+                    f"اختر من لوحة القيادة:",
+                    parse_mode="Markdown",
+                    reply_markup=main_keyboard(),
+                )
+
             await context.bot.send_message(
                 chat_id=BOSS_CHAT_ID,
-                text=f"🔔 *إشعار — أمين السر*\n\n🏢 مكتب جديد انضم للمنصة!\n🏛️ {office_name}\n🌍 {country}\n🔹 الكود: {code}",
+                text=(
+                    f"🔔 *إشعار — أمين السر*\n\n"
+                    f"🏢 مكتب جديد انضم للمنصة!\n"
+                    f"🏛️ {office_name}\n"
+                    f"🌍 {country}\n"
+                    f"🔹 الكود: {code}\n"
+                    f"📋 الحالة: {'في انتظار الدفع' if initial_status == 'pending_payment' else 'تجربة مجانية'}"
+                ),
                 parse_mode="Markdown"
             )
         else:

@@ -68,9 +68,23 @@ def MT001(chat_id):
         print(f"❌ MT001: {e}")
         return None
 
-def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id=""):
+TRIAL_DAYS = 7
+
+def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id="",
+          status="trial", billing_cycle=""):
+    """
+    تسجيل مكتب (Tenant) جديد.
+
+    status:
+        - "trial"           -> دخل من زرار "ابدأ الآن مجاناً" (بدون باقة محددة)
+        - "pending_payment"  -> دخل من كارت باقة محددة (شهري/سنوي) ولسه مدفعش
+    billing_cycle:
+        - "monthly" / "yearly" لو معروفة وقت التسجيل (جايه من كارت باقة)
+        - "" لو لسه في التجربة المجانية ومحددش باقة
+    """
     try:
         code = G001("Of", "Tenants", TENANTS_SHEET)
+        trial_start_date = NOW_LOCAL(country) if status == "trial" else ""
         ok = P003("Tenants", [
             code,
             str(chat_id),
@@ -80,16 +94,20 @@ def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_
             str(boss_chat_id),
             sheet_name,
             drive_folder_id,
-            "active",
+            status,
             NOW_LOCAL(country),
+            trial_start_date,
+            billing_cycle,
+            "",  # subscription_end_date — تتعبى بعد الدفع الناجح
         ], TENANTS_SHEET)
-        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country})")
+        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country}) — status={status}")
         return code if ok else None
     except Exception as e:
         print(f"❌ MT002: {e}")
         return None
 
 def MT003(chat_id):
+    """يحافظ على نفس السلوك القديم (True/False) لأي كود قديم بينادي عليه."""
     try:
         tenant = MT001(chat_id)
         if not tenant:
@@ -98,6 +116,71 @@ def MT003(chat_id):
     except Exception as e:
         print(f"❌ MT003: {e}")
         return False
+
+def MT008(chat_id):
+    """
+    فاحص حالة الاشتراك التفصيلي — يُستخدم بواسطة الـ decorator
+    require_active_subscription في main.py قبل تنفيذ أي routine فعلية.
+
+    يرجع dict بالشكل:
+        {
+            "allowed": bool,
+            "reason": "active" | "trial_active" | "trial_expired" |
+                      "pending_payment" | "no_tenant" | "unknown_status",
+            "tenant": dict | None,
+            "days_left": int | None,   # فقط لو الحالة trial_active
+        }
+    """
+    try:
+        tenant = MT001(chat_id)
+        if not tenant:
+            return {"allowed": False, "reason": "no_tenant", "tenant": None, "days_left": None}
+
+        status = (tenant.get("status") or "").strip().lower()
+
+        if status == "active":
+            return {"allowed": True, "reason": "active", "tenant": tenant, "days_left": None}
+
+        if status == "pending_payment":
+            return {"allowed": False, "reason": "pending_payment", "tenant": tenant, "days_left": None}
+
+        if status == "trial":
+            trial_start_raw = tenant.get("trial_start_date", "")
+            days_left = TRIAL_DAYS
+            if trial_start_raw:
+                try:
+                    from datetime import datetime as _dt
+                    start = _dt.strptime(str(trial_start_raw).strip()[:16], "%Y-%m-%d %H:%M")
+                    elapsed_days = (datetime.now() - start).days
+                    days_left = TRIAL_DAYS - elapsed_days
+                except Exception:
+                    days_left = TRIAL_DAYS  # لو فشل التحليل، ما نقفلش على المستخدم ظلماً
+
+            if days_left > 0:
+                return {"allowed": True, "reason": "trial_active", "tenant": tenant, "days_left": days_left}
+            else:
+                # انتهت الفترة التجريبية — نحدّث الحالة تلقائياً لـ expired
+                try:
+                    records = P005("Tenants", TENANTS_SHEET)
+                    for i, r in enumerate(records, start=2):
+                        if str(r.get("chat_id", "")) == str(chat_id):
+                            headers = list(r.keys())
+                            status_col = headers.index("status") + 1
+                            P004("Tenants", i, status_col, "expired", TENANTS_SHEET)
+                            break
+                except Exception as e:
+                    print(f"⚠️ MT008: فشل تحديث status لـ expired — {e}")
+                return {"allowed": False, "reason": "trial_expired", "tenant": tenant, "days_left": 0}
+
+        if status == "expired":
+            return {"allowed": False, "reason": "trial_expired", "tenant": tenant, "days_left": 0}
+
+        return {"allowed": False, "reason": "unknown_status", "tenant": tenant, "days_left": None}
+
+    except Exception as e:
+        print(f"❌ MT008: {e}")
+        # في حالة فشل غير متوقع، الأضمن نرفض الوصول لا نسمح به افتراضياً
+        return {"allowed": False, "reason": "error", "tenant": None, "days_left": None}
 
 def MT004(chat_id):
     try:
