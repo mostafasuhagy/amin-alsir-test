@@ -71,7 +71,7 @@ def MT001(chat_id):
 TRIAL_DAYS = 7
 
 def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id="",
-          status="trial", billing_cycle=""):
+          status="trial", billing_cycle="", sheet_id=""):
     """
     تسجيل مكتب (Tenant) جديد.
 
@@ -81,6 +81,10 @@ def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_
     billing_cycle:
         - "monthly" / "yearly" لو معروفة وقت التسجيل (جايه من كارت باقة)
         - "" لو لسه في التجربة المجانية ومحددش باقة
+    sheet_id:
+        - الـ Spreadsheet ID الفعلي (مش اسم الملف) — يُستخدم بواسطة لوحات
+          HTML الديناميكية (رئيس/عميل/مساعد) لقراءة شيت المكتب الصحيح.
+          يأتي من القيمة الثانية التي ترجعها MT006.
     """
     try:
         code = G001("Of", "Tenants", TENANTS_SHEET)
@@ -99,6 +103,7 @@ def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_
             trial_start_date,
             billing_cycle,
             "",  # subscription_end_date — تتعبى بعد الدفع الناجح
+            sheet_id,
         ], TENANTS_SHEET)
         print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country}) — status={status}")
         return code if ok else None
@@ -282,13 +287,13 @@ def MT006(office_name, tenant_code):
         # 3) إضافة الهيدرز لكل تبويب
         print(f"🔎 MT006 STEP4: about to call values().batchUpdate() for headers")
         headers_data = [
-            {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
+            {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id", "status"]]},
             {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
             {"range": "Events!A1",        "values": [["work_order_no", "event_date", "topic_code", "client_name", "event_type", "event_time", "location_court", "result", "next_appointment", "notes", "attachments"]]},
             {"range": "Documents!A1",     "values": [["doc_code", "topic_code", "doc_type", "doc_name", "file_extension", "drive_link", "uploaded_by", "upload_date", "status", "approval_date", "notes"]]},
             {"range": "Shipments!A1",     "values": [["shipment_code", "topic_code", "sender", "receiver", "send_date", "file_name", "file_type", "pickup_location", "receive_status", "receive_date", "notes"]]},
             {"range": "Custody!A1",       "values": [["custody_code", "responsible_code", "amount", "payment_due", "payment_status", "actual_payment_date", "notes"]]},
-            {"range": "Assistants!A1",    "values": [["assistant_code", "assistant_name", "bar_number", "mobile", "date_added", "notes", "attachments_code", "telegram_chat_id"]]},
+            {"range": "Assistants!A1",    "values": [["assistant_code", "assistant_name", "bar_number", "mobile", "date_added", "notes", "attachments_code", "telegram_chat_id", "status"]]},
             {"range": "Notifications!A1", "values": [["notification_code", "type", "ref_code", "name", "message", "date"]]},
             {"range": "Services!A1",      "values": [["service_code", "service_name", "date_added", "notes"]]},
         ]

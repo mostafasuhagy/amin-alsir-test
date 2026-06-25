@@ -268,6 +268,14 @@ def get_tenant_sheet(context):
     sheet_name = tenant.get("sheet_name", "")
     return sheet_name if sheet_name else SHEET_NAME
 
+def build_boss_dashboard_url(chat_id, tenant):
+    """
+    يبني رابط لوحة قيادة الرئيس الخاصة بمكتب معيّن، مع sheet_id الديناميكي.
+    """
+    token = base64.b64encode(str(chat_id).encode()).decode()
+    sheet_id = tenant.get("sheet_id", "")
+    return f"https://aminalserr.com/amin_alsir_dashboard.html?t={token}&sid={sheet_id}"
+
 # ═══════════════════════════════════════
 # لوحات القيادة
 # ═══════════════════════════════════════
@@ -382,6 +390,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ المكتب غير موجود. تواصل مع المكتب.")
                 return
             sheet_name = tenant_row.get("sheet_name", "")
+            sheet_id = tenant_row.get("sheet_id", "")
             boss_id = tenant_row.get("boss_chat_id", "") or BOSS_CHAT_ID
 
             client = P002("Clients", ref_code, sheet_name)
@@ -396,6 +405,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"👤 {client.get('client_name', '')}\n"
                     f"🔹 الكود: `{ref_code}`\n\n"
                     f"ستصلك إشعارات مكتب المحاماة هنا مباشرة.",
+                    parse_mode="Markdown"
+                )
+                token = base64.b64encode(str(chat_id).encode()).decode()
+                dashboard_url = f"https://aminalserr.com/amin_alsir_client_dashboard.html?t={token}&sid={sheet_id}"
+                await update.message.reply_text(
+                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n{dashboard_url}\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="Markdown"
                 )
                 await context.bot.send_message(
@@ -421,6 +436,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ المكتب غير موجود. تواصل مع المكتب.")
                 return
             sheet_name = tenant_row.get("sheet_name", "")
+            sheet_id = tenant_row.get("sheet_id", "")
             boss_id = tenant_row.get("boss_chat_id", "") or BOSS_CHAT_ID
 
             assistant = P002("Assistants", ref_code, sheet_name)
@@ -438,13 +454,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
                 token = base64.b64encode(str(chat_id).encode()).decode()
-                dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}"
+                dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}&sid={sheet_id}"
                 await update.message.reply_text(
                     f"🔗 *رابط لوحة القيادة الخاصة بك:*\n{dashboard_url}\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="Markdown"
                 )
                 await context.bot.send_message(
-                    chat_id=BOSS_CHAT_ID,
+                    chat_id=boss_id,
                     text=f"🔔 *إشعار — أمين السر*\n\n📱 مساعد ربط حسابه بالبوت\n👥 {assistant.get('assistant_name','')}\n🔹 {ref_code}",
                     parse_mode="Markdown"
                 )
@@ -467,10 +483,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 office_name = tenant.get("office_name", "المكتب")
                 country = tenant.get("country", "مصر")
                 context.user_data["tenant"] = tenant
+                dashboard_url = build_boss_dashboard_url(chat_id, tenant)
                 await update.message.reply_text(
                     f"أهلاً بك مجدداً في *أمين السر* 🏛️\n\n"
                     f"🏢 {office_name}\n"
                     f"🌍 {country}\n\n"
+                    f"🔗 لوحة القيادة الكاملة:\n{dashboard_url}\n\n"
                     f"اختر من لوحة القيادة:",
                     parse_mode="Markdown",
                     reply_markup=main_keyboard()
@@ -496,10 +514,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         office_name = tenant.get("office_name", "المكتب")
         country = tenant.get("country", "مصر")
         context.user_data["tenant"] = tenant
+        dashboard_url = build_boss_dashboard_url(chat_id, tenant)
         await update.message.reply_text(
             f"أهلاً بك في *أمين السر* 🏛️\n\n"
             f"🏢 {office_name}\n"
             f"🌍 {country}\n\n"
+            f"🔗 لوحة القيادة الكاملة:\n{dashboard_url}\n\n"
             f"اختر من لوحة القيادة:",
             parse_mode="Markdown",
             reply_markup=main_keyboard()
@@ -1267,7 +1287,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         code = MT002(
             chat_id, office_name, country, chat_id, sheet_name, folder_id,
-            status=initial_status, billing_cycle=billing_cycle,
+            status=initial_status, billing_cycle=billing_cycle, sheet_id=sheet_id,
         )
 
         if code:
@@ -1302,12 +1322,14 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     )
             else:
                 # trial — يستخدم البوت بالكامل لمدة TRIAL_DAYS أيام
+                dashboard_url = build_boss_dashboard_url(chat_id, tenant)
                 await query.edit_message_text(
                     f"✅ *تم تسجيل مكتبك بنجاح!*\n\n"
                     f"🏢 {office_name}\n"
                     f"🌍 {country}\n"
                     f"🔹 الكود: `{code}`\n\n"
                     f"🎁 لديك *{TRIAL_DAYS} أيام مجانية* لتجربة النظام بالكامل.\n\n"
+                    f"🔗 لوحة القيادة الكاملة:\n{dashboard_url}\n\n"
                     f"اختر من لوحة القيادة:",
                     parse_mode="Markdown",
                     reply_markup=main_keyboard(),
