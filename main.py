@@ -410,7 +410,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 token = base64.b64encode(str(chat_id).encode()).decode()
                 dashboard_url = f"https://aminalserr.com/amin_alsir_client_dashboard.html?t={token}&sid={sheet_id}"
                 await update.message.reply_text(
-                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n{dashboard_url}\n\n📌 احفظ هذا الرابط في مفضلاتك",
+                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n`{dashboard_url}`\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="Markdown"
                 )
                 await context.bot.send_message(
@@ -456,7 +456,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 token = base64.b64encode(str(chat_id).encode()).decode()
                 dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}&sid={sheet_id}"
                 await update.message.reply_text(
-                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n{dashboard_url}\n\n📌 احفظ هذا الرابط في مفضلاتك",
+                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n`{dashboard_url}`\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="Markdown"
                 )
                 await context.bot.send_message(
@@ -488,7 +488,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"أهلاً بك مجدداً في *أمين السر* 🏛️\n\n"
                     f"🏢 {office_name}\n"
                     f"🌍 {country}\n\n"
-                    f"🔗 لوحة القيادة الكاملة:\n{dashboard_url}\n\n"
+                    f"🔗 لوحة القيادة الكاملة:\n`{dashboard_url}`\n\n"
                     f"اختر من لوحة القيادة:",
                     parse_mode="Markdown",
                     reply_markup=main_keyboard()
@@ -519,7 +519,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"أهلاً بك في *أمين السر* 🏛️\n\n"
             f"🏢 {office_name}\n"
             f"🌍 {country}\n\n"
-            f"🔗 لوحة القيادة الكاملة:\n{dashboard_url}\n\n"
+            f"🔗 لوحة القيادة الكاملة:\n`{dashboard_url}`\n\n"
             f"اختر من لوحة القيادة:",
             parse_mode="Markdown",
             reply_markup=main_keyboard()
@@ -1329,7 +1329,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"🌍 {country}\n"
                     f"🔹 الكود: `{code}`\n\n"
                     f"🎁 لديك *{TRIAL_DAYS} أيام مجانية* لتجربة النظام بالكامل.\n\n"
-                    f"🔗 لوحة القيادة الكاملة:\n{dashboard_url}\n\n"
+                    f"🔗 لوحة القيادة الكاملة:\n`{dashboard_url}`\n\n"
                     f"اختر من لوحة القيادة:",
                     parse_mode="Markdown",
                     reply_markup=main_keyboard(),
