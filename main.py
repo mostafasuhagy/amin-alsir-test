@@ -410,8 +410,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 token = base64.b64encode(str(chat_id).encode()).decode()
                 dashboard_url = f"https://aminalserr.com/amin_alsir_client_dashboard.html?t={token}&sid={sheet_id}"
                 await update.message.reply_text(
-                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n`{dashboard_url}`\n\n📌 احفظ هذا الرابط في مفضلاتك",
-                    parse_mode="Markdown"
+                    f"🔗 <b>رابط لوحة القيادة الخاصة بك:</b>\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n📌 احفظ هذا الرابط في مفضلاتك",
+                    parse_mode="HTML"
                 )
                 await context.bot.send_message(
                     chat_id=boss_id,
@@ -456,8 +456,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 token = base64.b64encode(str(chat_id).encode()).decode()
                 dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}&sid={sheet_id}"
                 await update.message.reply_text(
-                    f"🔗 *رابط لوحة القيادة الخاصة بك:*\n`{dashboard_url}`\n\n📌 احفظ هذا الرابط في مفضلاتك",
-                    parse_mode="Markdown"
+                    f"🔗 <b>رابط لوحة القيادة الخاصة بك:</b>\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n📌 احفظ هذا الرابط في مفضلاتك",
+                    parse_mode="HTML"
                 )
                 await context.bot.send_message(
                     chat_id=boss_id,
@@ -485,12 +485,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data["tenant"] = tenant
                 dashboard_url = build_boss_dashboard_url(chat_id, tenant)
                 await update.message.reply_text(
-                    f"أهلاً بك مجدداً في *أمين السر* 🏛️\n\n"
+                    f"أهلاً بك مجدداً في <b>أمين السر</b> 🏛️\n\n"
                     f"🏢 {office_name}\n"
                     f"🌍 {country}\n\n"
-                    f"🔗 لوحة القيادة الكاملة:\n`{dashboard_url}`\n\n"
+                    f"🔗 لوحة القيادة الكاملة:\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n"
                     f"اختر من لوحة القيادة:",
-                    parse_mode="Markdown",
+                    parse_mode="HTML",
                     reply_markup=main_keyboard()
                 )
             else:
@@ -516,12 +516,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["tenant"] = tenant
         dashboard_url = build_boss_dashboard_url(chat_id, tenant)
         await update.message.reply_text(
-            f"أهلاً بك في *أمين السر* 🏛️\n\n"
+            f"أهلاً بك في <b>أمين السر</b> 🏛️\n\n"
             f"🏢 {office_name}\n"
             f"🌍 {country}\n\n"
-            f"🔗 لوحة القيادة الكاملة:\n`{dashboard_url}`\n\n"
+            f"🔗 لوحة القيادة الكاملة:\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n"
             f"اختر من لوحة القيادة:",
-            parse_mode="Markdown",
+            parse_mode="HTML",
             reply_markup=main_keyboard()
         )
     else:
@@ -1324,14 +1324,14 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # trial — يستخدم البوت بالكامل لمدة TRIAL_DAYS أيام
                 dashboard_url = build_boss_dashboard_url(chat_id, tenant)
                 await query.edit_message_text(
-                    f"✅ *تم تسجيل مكتبك بنجاح!*\n\n"
+                    f"✅ <b>تم تسجيل مكتبك بنجاح!</b>\n\n"
                     f"🏢 {office_name}\n"
                     f"🌍 {country}\n"
-                    f"🔹 الكود: `{code}`\n\n"
-                    f"🎁 لديك *{TRIAL_DAYS} أيام مجانية* لتجربة النظام بالكامل.\n\n"
-                    f"🔗 لوحة القيادة الكاملة:\n`{dashboard_url}`\n\n"
+                    f"🔹 الكود: <code>{code}</code>\n\n"
+                    f"🎁 لديك <b>{TRIAL_DAYS} أيام مجانية</b> لتجربة النظام بالكامل.\n\n"
+                    f"🔗 لوحة القيادة الكاملة:\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n"
                     f"اختر من لوحة القيادة:",
-                    parse_mode="Markdown",
+                    parse_mode="HTML",
                     reply_markup=main_keyboard(),
                 )
 
