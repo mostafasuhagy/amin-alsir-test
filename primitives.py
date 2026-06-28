@@ -216,18 +216,6 @@ def MT006(office_name, tenant_code):
 
     except Exception as e:
         print(f"❌ MT006: {e}")
-        # 🔍 تشخيص مؤقت: نطبع تفاصيل الخطأ الكاملة من Google API
-        # (سيتم حذف هذا الجزء بعد التشخيص)
-        try:
-            print(f"🔍 MT006 DEBUG — error type: {type(e).__name__}")
-            if hasattr(e, "resp"):
-                print(f"🔍 MT006 DEBUG — status: {e.resp.status}, reason: {e.resp.reason}")
-            if hasattr(e, "content"):
-                print(f"🔍 MT006 DEBUG — raw content: {e.content}")
-            if hasattr(e, "error_details"):
-                print(f"🔍 MT006 DEBUG — error_details: {e.error_details}")
-        except Exception as debug_e:
-            print(f"🔍 MT006 DEBUG — failed to extract details: {debug_e}")
         return None, None
 
 def MT007(tenant_code):
@@ -521,7 +509,6 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
-            "driveId": SHARED_DRIVE_ID,
         }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
@@ -562,7 +549,10 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID
         ).execute()
         folders = res.get("files", [])
         if not folders:
@@ -574,7 +564,10 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
             q=query2,
             fields="files(id, name, webViewLink, createdTime)",
             orderBy="createdTime desc",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID
         ).execute()
 
         files = []
