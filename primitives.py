@@ -191,6 +191,37 @@ def MT006(office_name, tenant_code):
         except Exception as e:
             print(f"⚠️ MT006: فشل حذف Sheet1 الافتراضي — {e}")
 
+        # ── تنسيق كل أعمدة كل تاب كـ "نص عادي" (PLAIN_TEXT) ──
+        # بدون هذا، Google Sheets يخمّن نوع كل عمود تلقائيًا من البيانات
+        # المُدخلة، وأكواد مثل "Cl-001" أو تواريخ مثل "2026-06-28" ممكن
+        # تتفسّر غلط كأرقام أو تواريخ، فتظهر بصيغة مختلفة تمامًا (مثل
+        # تحويل وقت الإدخال نفسه لتاريخ في عمود الكود). هذا يثبّت كل
+        # خلية كنص خام صراحة، بصرف النظر عن شكل القيمة المُدخلة.
+        try:
+            new_sheet_ids = [
+                reply["addSheet"]["properties"]["sheetId"]
+                for reply in batch_response.get("replies", [])
+                if "addSheet" in reply
+            ]
+            format_requests = [
+                {
+                    "repeatCell": {
+                        "range": {"sheetId": sid},
+                        "cell": {"userEnteredFormat": {"numberFormat": {"type": "TEXT"}}},
+                        "fields": "userEnteredFormat.numberFormat",
+                    }
+                }
+                for sid in new_sheet_ids
+            ]
+            if format_requests:
+                sheets_service.spreadsheets().batchUpdate(
+                    spreadsheetId=spreadsheet_id,
+                    body={"requests": format_requests}
+                ).execute()
+                print(f"✅ MT006: تم تثبيت تنسيق النص العادي لكل الـ tabs")
+        except Exception as e:
+            print(f"⚠️ MT006: فشل تثبيت تنسيق النص العادي — {e}")
+
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
             {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
@@ -338,7 +369,7 @@ def P002(tab, ref_code, sheet_name=SHEET_NAME):
 
 def P003(tab, data, sheet_name=SHEET_NAME):
     try:
-        P001(sheet_name).worksheet(tab).append_row(data, value_input_option="USER_ENTERED")
+        P001(sheet_name).worksheet(tab).append_row(data, value_input_option="RAW")
         return True
     except Exception as e:
         print(f"❌ P003: {e}")
