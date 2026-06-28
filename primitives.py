@@ -131,23 +131,58 @@ def MT006(office_name, tenant_code):
 
         sheet_name = f"amin_alsir_{tenant_code}"
 
-        spreadsheet = sheets_service.spreadsheets().create(body={
-            "properties": {"title": sheet_name},
-            "sheets": [
-                {"properties": {"title": "Clients"}},
-                {"properties": {"title": "Topics"}},
-                {"properties": {"title": "Events"}},
-                {"properties": {"title": "Documents"}},
-                {"properties": {"title": "Shipments"}},
-                {"properties": {"title": "Custody"}},
-                {"properties": {"title": "Assistants"}},
-                {"properties": {"title": "Notifications"}},
-                {"properties": {"title": "Services"}},
-            ]
-        }).execute()
+        # ── إنشاء ملف الشيت مباشرة داخل الـ Shared Drive ──
+        # لا نستخدم sheets_service.spreadsheets().create() لأنها تنشئ
+        # الملف في "My Drive" الخاص بحساب الـ Service Account، وهي مساحة
+        # تخزين شخصية محدودة جدًا (شبه صفرية) وتمتلئ بسرعة مع تكرار
+        # الإنشاء، فترجع 403 "the caller does not have permission" (رسالة
+        # خطأ مضلّلة من جوجل لمشكلة Storage quota لا علاقة لها بالصلاحيات).
+        # الحل: نستخدم drive_service.files().create() مع تحديد parents
+        # على الـ Shared Drive (مساحته منفصلة ومتجددة)، فينشأ الملف هناك
+        # من اللحظة الأولى ولا يستهلك أي شيء من مساحة الـ Service Account.
+        file_metadata = {
+            "name": sheet_name,
+            "mimeType": "application/vnd.google-apps.spreadsheet",
+            "parents": [SHARED_DRIVE_ID],
+        }
+        created_file = drive_service.files().create(
+            body=file_metadata,
+            fields="id",
+            supportsAllDrives=True
+        ).execute()
+        spreadsheet_id = created_file["id"]
+        print(f"✅ MT006: تم إنشاء الشيت داخل Shared Drive — {sheet_name} ({spreadsheet_id})")
 
-        spreadsheet_id = spreadsheet["spreadsheetId"]
-        print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
+        # الملف الجديد بيتولد بتاب افتراضي واحد اسمه "Sheet1" — نضيف
+        # التابات المطلوبة، ثم نحذف "Sheet1" الافتراضي في نفس الطلب.
+        add_sheets_body = {
+            "requests": [
+                {"addSheet": {"properties": {"title": "Clients"}}},
+                {"addSheet": {"properties": {"title": "Topics"}}},
+                {"addSheet": {"properties": {"title": "Events"}}},
+                {"addSheet": {"properties": {"title": "Documents"}}},
+                {"addSheet": {"properties": {"title": "Shipments"}}},
+                {"addSheet": {"properties": {"title": "Custody"}}},
+                {"addSheet": {"properties": {"title": "Assistants"}}},
+                {"addSheet": {"properties": {"title": "Notifications"}}},
+                {"addSheet": {"properties": {"title": "Services"}}},
+            ]
+        }
+        batch_response = sheets_service.spreadsheets().batchUpdate(
+            spreadsheetId=spreadsheet_id,
+            body=add_sheets_body
+        ).execute()
+        print(f"✅ MT006: تم إضافة الـ tabs التسعة")
+
+        # حذف "Sheet1" الافتراضي (sheetId يكون دايمًا 0 في ملف جديد)
+        try:
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": [{"deleteSheet": {"sheetId": 0}}]}
+            ).execute()
+            print(f"✅ MT006: تم حذف Sheet1 الافتراضي")
+        except Exception as e:
+            print(f"⚠️ MT006: فشل حذف Sheet1 الافتراضي — {e}")
 
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
@@ -167,16 +202,6 @@ def MT006(office_name, tenant_code):
         ).execute()
         print(f"✅ MT006: تم إضافة الهيدرز لكل الـ tabs")
 
-        drive_service.permissions().create(
-            fileId=spreadsheet_id,
-            body={
-                "type": "user",
-                "role": "writer",
-                "emailAddress": "amin-alsir-bot@amin-alsir.iam.gserviceaccount.com"
-            }
-        ).execute()
-        print(f"✅ MT006: تم مشاركة الشيت مع Service Account")
-
         # ── مشاركة الشيت مع حساب Apps Script (للكتابة من لوحات القيادة) ──
         # Code.gs منشور ويعمل تحت حساب mostafa.suhagy@gmail.com، فلازم
         # يكون عنده صلاحية "محرر" على كل شيت مكتب جديد، وإلا postToSheet
@@ -189,7 +214,8 @@ def MT006(office_name, tenant_code):
                     "type": "user",
                     "role": "writer",
                     "emailAddress": "mostafa.suhagy@gmail.com"
-                }
+                },
+                supportsAllDrives=True
             ).execute()
             print(f"✅ MT006: تم مشاركة الشيت مع حساب Apps Script (mostafa.suhagy@gmail.com)")
         except Exception as e:
@@ -206,7 +232,8 @@ def MT006(office_name, tenant_code):
                 body={
                     "type": "anyone",
                     "role": "reader"
-                }
+                },
+                supportsAllDrives=True
             ).execute()
             print(f"✅ MT006: تم تفعيل القراءة العامة للشيت (Anyone with the link - Viewer)")
         except Exception as e:
@@ -217,6 +244,7 @@ def MT006(office_name, tenant_code):
     except Exception as e:
         print(f"❌ MT006: {e}")
         return None, None
+
 
 def MT007(tenant_code):
     try:
@@ -509,7 +537,6 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
-            "driveId": SHARED_DRIVE_ID,
         }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
@@ -550,7 +577,10 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID
         ).execute()
         folders = res.get("files", [])
         if not folders:
@@ -562,7 +592,10 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
             q=query2,
             fields="files(id, name, webViewLink, createdTime)",
             orderBy="createdTime desc",
-            supportsAllDrives=True
+            supportsAllDrives=True,
+            includeItemsFromAllDrives=True,
+            corpora="drive",
+            driveId=SHARED_DRIVE_ID
         ).execute()
 
         files = []
