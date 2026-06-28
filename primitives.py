@@ -12,6 +12,7 @@ CALENDAR_ID = "mostafa.suhagy@gmail.com"
 DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
 SHARED_DRIVE_ID = "0AGGAp8sywzBkUk9PVA"
 TENANTS_SHEET = "amin_alsir_cases_new_V2"
+TRIAL_DAYS = 7
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -68,22 +69,28 @@ def MT001(chat_id):
         print(f"❌ MT001: {e}")
         return None
 
-def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id=""):
+def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id="",
+           status="trial", billing_cycle="", sheet_id=""):
     try:
         code = G001("Of", "Tenants", TENANTS_SHEET)
+        today_str = NOW_LOCAL(country)[:10]  # YYYY-MM-DD فقط لأعمدة التاريخ
         ok = P003("Tenants", [
-            code,
-            str(chat_id),
-            office_name,
-            country,
-            GET_TIMEZONE(country),
-            str(boss_chat_id),
-            sheet_name,
-            drive_folder_id,
-            "active",
-            NOW_LOCAL(country),
+            code,                  # A  tenant_code
+            str(chat_id),          # B  chat_id
+            office_name,           # C  office_name
+            country,                # D  country
+            GET_TIMEZONE(country), # E  timezone
+            str(boss_chat_id),     # F  boss_chat_id
+            sheet_name,             # G  sheet_name
+            drive_folder_id,        # H  drive_folder_id
+            status,                 # I  status (trial / pending_payment / active)
+            NOW_LOCAL(country),    # J  date_added
+            today_str,               # K  trial_start_date
+            billing_cycle,           # L  billing_cycle
+            "",                       # M  subscription_end_date (تتحدد بعد الدفع/انتهاء التجربة)
+            sheet_id,                  # N  sheet_id
         ], TENANTS_SHEET)
-        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country})")
+        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country}) — status={status}")
         return code if ok else None
     except Exception as e:
         print(f"❌ MT002: {e}")
