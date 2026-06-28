@@ -216,6 +216,18 @@ def MT006(office_name, tenant_code):
 
     except Exception as e:
         print(f"❌ MT006: {e}")
+        # 🔍 تشخيص مؤقت: نطبع تفاصيل الخطأ الكاملة من Google API
+        # (سيتم حذف هذا الجزء بعد التشخيص)
+        try:
+            print(f"🔍 MT006 DEBUG — error type: {type(e).__name__}")
+            if hasattr(e, "resp"):
+                print(f"🔍 MT006 DEBUG — status: {e.resp.status}, reason: {e.resp.reason}")
+            if hasattr(e, "content"):
+                print(f"🔍 MT006 DEBUG — raw content: {e.content}")
+            if hasattr(e, "error_details"):
+                print(f"🔍 MT006 DEBUG — error_details: {e.error_details}")
+        except Exception as debug_e:
+            print(f"🔍 MT006 DEBUG — failed to extract details: {debug_e}")
         return None, None
 
 def MT007(tenant_code):
