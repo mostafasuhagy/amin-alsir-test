@@ -509,6 +509,7 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
+            "driveId": SHARED_DRIVE_ID,
         }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
@@ -549,10 +550,7 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
         )
         res = service.files().list(
             q=query, fields="files(id, name)",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="drive",
-            driveId=SHARED_DRIVE_ID
+            supportsAllDrives=True
         ).execute()
         folders = res.get("files", [])
         if not folders:
@@ -564,10 +562,7 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
             q=query2,
             fields="files(id, name, webViewLink, createdTime)",
             orderBy="createdTime desc",
-            supportsAllDrives=True,
-            includeItemsFromAllDrives=True,
-            corpora="drive",
-            driveId=SHARED_DRIVE_ID
+            supportsAllDrives=True
         ).execute()
 
         files = []
