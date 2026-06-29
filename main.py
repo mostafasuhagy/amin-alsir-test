@@ -618,6 +618,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sheet_name = get_tenant_sheet(context)
             tenant_code = context.user_data.get("tenant", {}).get("tenant_code", "")
             code = G001("Cl", "Clients", sheet_name)
+            print(f"🔍 DEBUG F001 — code value: {code!r}, type: {type(code).__name__}, sheet_name: {sheet_name!r}")
             ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
