@@ -191,37 +191,6 @@ def MT006(office_name, tenant_code):
         except Exception as e:
             print(f"⚠️ MT006: فشل حذف Sheet1 الافتراضي — {e}")
 
-        # ── تنسيق كل أعمدة كل تاب كـ "نص عادي" (PLAIN_TEXT) ──
-        # بدون هذا، Google Sheets يخمّن نوع كل عمود تلقائيًا من البيانات
-        # المُدخلة، وأكواد مثل "Cl-001" أو تواريخ مثل "2026-06-28" ممكن
-        # تتفسّر غلط كأرقام أو تواريخ، فتظهر بصيغة مختلفة تمامًا (مثل
-        # تحويل وقت الإدخال نفسه لتاريخ في عمود الكود). هذا يثبّت كل
-        # خلية كنص خام صراحة، بصرف النظر عن شكل القيمة المُدخلة.
-        try:
-            new_sheet_ids = [
-                reply["addSheet"]["properties"]["sheetId"]
-                for reply in batch_response.get("replies", [])
-                if "addSheet" in reply
-            ]
-            format_requests = [
-                {
-                    "repeatCell": {
-                        "range": {"sheetId": sid},
-                        "cell": {"userEnteredFormat": {"numberFormat": {"type": "TEXT"}}},
-                        "fields": "userEnteredFormat.numberFormat",
-                    }
-                }
-                for sid in new_sheet_ids
-            ]
-            if format_requests:
-                sheets_service.spreadsheets().batchUpdate(
-                    spreadsheetId=spreadsheet_id,
-                    body={"requests": format_requests}
-                ).execute()
-                print(f"✅ MT006: تم تثبيت تنسيق النص العادي لكل الـ tabs")
-        except Exception as e:
-            print(f"⚠️ MT006: فشل تثبيت تنسيق النص العادي — {e}")
-
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
             {"range": "Topics!A1",        "values": [["topic_code", "client_code", "client_name", "service_code", "service_name", "assistant_code", "assistant_name", "date_opened", "status", "notes"]]},
@@ -291,10 +260,23 @@ def MT007(tenant_code):
             return None
 
         folder_name = f"amin_alsir_{tenant_code}"
+
+        # ── إنشاء مجلد المكتب مباشرة داخل الـ Shared Drive ──
+        # سابقًا كان الـ parent هنا = DRIVE_FOLDER_ID (مجلد قديم تابع
+        # لـ "My Drive" الشخصي بحساب الـ Service Account)، فكل مكتب جديد
+        # كان يُنشأ كمجلد فرعي داخل My Drive الشخصي بدل الـ Shared Drive.
+        # هذا لا يفشل وقت إنشاء المجلد نفسه (عملية ميتاداتا فقط)، لكنه
+        # يفشل لاحقًا بخطأ 403 "storageQuotaExceeded" عند أي محاولة رفع
+        # ملف فعلي بداخله أو بداخل أي مجلد فرعي منه — لأن My Drive الخاص
+        # بالـ Service Account له مساحة تخزين شبه صفرية لمحتوى الملفات
+        # (تمامًا كما كانت مشكلة MT006 الأصلية مع إنشاء الشيت نفسه).
+        # الحل: نستخدم SHARED_DRIVE_ID كـ parent مباشرة، فمجلد المكتب
+        # الجديد ومجلداته الفرعية (المواضيع) ومستنداتها كل ينشأ من
+        # اللحظة الأولى داخل مساحة الـ Shared Drive المنفصلة (60 جيجا).
         folder_metadata = {
             "name":     folder_name,
             "mimeType": "application/vnd.google-apps.folder",
-            "parents":  [DRIVE_FOLDER_ID],
+            "parents":  [SHARED_DRIVE_ID],
         }
         folder = service.files().create(
             body=folder_metadata,
@@ -302,7 +284,7 @@ def MT007(tenant_code):
             supportsAllDrives=True
         ).execute()
         folder_id = folder.get("id")
-        print(f"✅ MT007: تم إنشاء مجلد Drive — {folder_name} ({folder_id})")
+        print(f"✅ MT007: تم إنشاء مجلد المكتب داخل Shared Drive — {folder_name} ({folder_id})")
         return folder_id
 
     except Exception as e:
@@ -369,18 +351,7 @@ def P002(tab, ref_code, sheet_name=SHEET_NAME):
 
 def P003(tab, data, sheet_name=SHEET_NAME):
     try:
-        # نحوّل كل قيمة في الصف إلى نص صراحة قبل الكتابة. هذا يضمن أن
-        # Google Sheets لن يفسّر أي قيمة (كود، رقم قومي، تاريخ مكتوب
-        # كنص) كتاريخ أو رقم تلقائيًا، بصرف النظر عن تنسيق العمود أو
-        # محتواه — الحل النهائي القاطع لمشكلة تحوّل الأكواد لتواريخ.
-        safe_data = [str(v) if v is not None else "" for v in data]
-        # العمود الأول هو دائمًا كود مرجعي (client_code, topic_code...).
-        # نضيف له علامة اقتباس مبتدئة (') — وهي الطريقة القياسية في
-        # Google Sheets لإجبار أي خلية على المعاملة كنص خام صراحة،
-        # بصرف النظر عن أي تخمين تلقائي لنوع البيانات.
-        if safe_data and not safe_data[0].startswith("'"):
-            safe_data[0] = "'" + safe_data[0]
-        P001(sheet_name).worksheet(tab).append_row(safe_data, value_input_option="RAW")
+        P001(sheet_name).worksheet(tab).append_row(data, value_input_option="USER_ENTERED")
         return True
     except Exception as e:
         print(f"❌ P003: {e}")
