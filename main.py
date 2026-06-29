@@ -23,6 +23,13 @@ from flask import Flask, request, jsonify
 TOKEN = os.environ.get("BOT_TOKEN", "")
 BOSS_CHAT_ID = int(os.environ.get("BOSS_CHAT_ID", "8653723225"))  # v2.1
 
+# أي حالة غير فاضية (trial / pending_payment / active) تعني إن المكتب
+# مسجّل فعلاً ولا يحتاج تسجيلاً جديدًا في start(). قبل هذا التصحيح كان
+# الشرط = "active" فقط، فكل مكتب لسه في فترة التجربة المجانية (trial)
+# أو منتظر الدفع (pending_payment) كان يُعامل كمكتب جديد ويُطلب منه
+# التسجيل من الصفر في كل /start، رغم وجوده فعلاً.
+EXISTING_TENANT_STATUSES = {"trial", "pending_payment", "active"}
+
 # ═══════════════════════════════════════
 # Paymob — متغيرات الإعداد (من Railway Variables)
 # ═══════════════════════════════════════
@@ -479,7 +486,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"
 
             tenant = MT001(chat_id)
-            if tenant and tenant.get("status") == "active":
+            if tenant and tenant.get("status") in EXISTING_TENANT_STATUSES:
                 office_name = tenant.get("office_name", "المكتب")
                 country = tenant.get("country", "مصر")
                 context.user_data["tenant"] = tenant
@@ -509,8 +516,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ── التحقق من الاشتراك (الحالة العادية، بدون Deep Link) ──
     tenant = MT001(chat_id)
 
-    if tenant and tenant.get("status") == "active":
-        # مكتب مشترك — فتح الداشبورد
+    if tenant and tenant.get("status") in EXISTING_TENANT_STATUSES:
+        # مكتب موجود فعلاً — فتح الداشبورد
         office_name = tenant.get("office_name", "المكتب")
         country = tenant.get("country", "مصر")
         context.user_data["tenant"] = tenant
@@ -618,7 +625,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sheet_name = get_tenant_sheet(context)
             tenant_code = context.user_data.get("tenant", {}).get("tenant_code", "")
             code = G001("Cl", "Clients", sheet_name)
-            print(f"🔍 DEBUG F001 — code value: {code!r}, type: {type(code).__name__}, sheet_name: {sheet_name!r}")
             ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
             context.user_data.clear()
             if ok:
