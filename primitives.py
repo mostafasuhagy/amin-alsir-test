@@ -369,7 +369,18 @@ def P002(tab, ref_code, sheet_name=SHEET_NAME):
 
 def P003(tab, data, sheet_name=SHEET_NAME):
     try:
-        P001(sheet_name).worksheet(tab).append_row(data, value_input_option="RAW")
+        # نحوّل كل قيمة في الصف إلى نص صراحة قبل الكتابة. هذا يضمن أن
+        # Google Sheets لن يفسّر أي قيمة (كود، رقم قومي، تاريخ مكتوب
+        # كنص) كتاريخ أو رقم تلقائيًا، بصرف النظر عن تنسيق العمود أو
+        # محتواه — الحل النهائي القاطع لمشكلة تحوّل الأكواد لتواريخ.
+        safe_data = [str(v) if v is not None else "" for v in data]
+        # العمود الأول هو دائمًا كود مرجعي (client_code, topic_code...).
+        # نضيف له علامة اقتباس مبتدئة (') — وهي الطريقة القياسية في
+        # Google Sheets لإجبار أي خلية على المعاملة كنص خام صراحة،
+        # بصرف النظر عن أي تخمين تلقائي لنوع البيانات.
+        if safe_data and not safe_data[0].startswith("'"):
+            safe_data[0] = "'" + safe_data[0]
+        P001(sheet_name).worksheet(tab).append_row(safe_data, value_input_option="RAW")
         return True
     except Exception as e:
         print(f"❌ P003: {e}")
