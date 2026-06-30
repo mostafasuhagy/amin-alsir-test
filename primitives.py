@@ -342,9 +342,29 @@ def P006(tab, col_name, value, sheet_name=SHEET_NAME):
         return []
 
 def G001(prefix, tab, sheet_name=SHEET_NAME):
+    """
+    يولّد كود جديد (مثال: Of-003, Cl-015) بالاعتماد على أعلى رقم موجود فعليًا
+    في الكود (العمود الأول) بدل عدّ عدد الصفوف الحالية.
+    سبب التعديل: العدّ بالصفوف كان بيسبب تصادم أكواد لو اتمسح أي صف قديم
+    (مثلاً صف مكتب اتمسح يدويًا)، لأن العدّ كان بينزل ويرجع يولّد كود
+    قديم اتاخد بالفعل.
+    """
     try:
-        count = len(P005(tab, sheet_name)) + 1
-        return f"{prefix}-{count:03d}"
+        records = P005(tab, sheet_name)
+        max_num = 0
+        for r in records:
+            if not r:
+                continue
+            code = str(list(r.values())[0]).strip()
+            if code.startswith(prefix + "-"):
+                suffix = code[len(prefix) + 1:]
+                try:
+                    num = int(suffix)
+                    if num > max_num:
+                        max_num = num
+                except ValueError:
+                    continue
+        return f"{prefix}-{max_num + 1:03d}"
     except Exception as e:
         print(f"❌ G001: {e}")
         return f"{prefix}-001"
