@@ -14,6 +14,7 @@
 <title>أمين السر — لوحة العميل</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
+html, body { overscroll-behavior-y: contain; }
 :root{
   --navy:#0D1B4B;--navy2:#162258;--gold:#F5C518;--gold2:#E8B400;--yellow:#FFE600;
   --white:#FFFFFF;--gray:#94A3B8;--green:#22C55E;--blue:#4F8EF7;--red:#EF4444;
@@ -270,6 +271,17 @@ function openModal(name){document.getElementById('modal-'+name).classList.add('o
 function closeModal(name){document.getElementById('modal-'+name).classList.remove('open');}
 function linkAccount(){const chatId=CLIENT_CHAT_ID;if(chatId){showToast('✅ حسابك مرتبط بالفعل!');return;}const url='https://t.me/amin_alsir_bot?start=client_'+encodeURIComponent(window.location.search);window.open(url,'_blank');}
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'');t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
+</script>
+
+<script>
+window.addEventListener('pageshow', function(event) {
+  if (event.persisted) {
+    // الصفحة رجعت من كاش المتصفح (bfcache) — نجبر إعادة تحميل كاملة
+    // عشان نضمن إن البيانات المعروضة هي أحدث بيانات من الشيت ومش
+    // نسخة قديمة محفوظة محليًا لمكتب تاني
+    window.location.reload();
+  }
+});
 </script>
 </body>
 </html>
