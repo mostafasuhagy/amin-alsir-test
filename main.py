@@ -1,4 +1,4 @@
-﻿from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder, CommandHandler, CallbackQueryHandler,
     ContextTypes, MessageHandler, filters
@@ -23,16 +23,8 @@ from flask import Flask, request, jsonify
 TOKEN = os.environ.get("BOT_TOKEN", "")
 BOSS_CHAT_ID = int(os.environ.get("BOSS_CHAT_ID", "8653723225"))  # v2.1
 
-# أي حالة غير فاضية (trial / pending_payment / active) تعني إن المكتب
-# مسجّل فعلاً ولا يحتاج تسجيلاً جديدًا في start(). قبل هذا التصحيح كان
-# الشرط = "active" فقط، فكل مكتب لسه في فترة التجربة المجانية (trial)
-# أو منتظر الدفع (pending_payment) كان يُعامل كمكتب جديد ويُطلب منه
-# التسجيل من الصفر في كل /start، رغم وجوده فعلاً.
 EXISTING_TENANT_STATUSES = {"trial", "pending_payment", "active"}
 
-# ═══════════════════════════════════════
-# Paymob — متغيرات الإعداد (من Railway Variables)
-# ═══════════════════════════════════════
 PAYMOB_API_KEY         = os.environ.get("PAYMOB_API_KEY", "")
 PAYMOB_SECRET_KEY      = os.environ.get("PAYMOB_SECRET_KEY", "")
 PAYMOB_PUBLIC_KEY      = os.environ.get("PAYMOB_PUBLIC_KEY", "")
@@ -44,11 +36,6 @@ PAYMOB_INTENTION_URL   = "https://accept.paymob.com/v1/intention/"
 
 
 def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str = ""):
-    """
-    تطلب من Paymob رابط دفع مخصص لمكتب معيّن (tenant_code).
-    billing_cycle: "monthly" أو "yearly"
-    بترجع: رابط الدفع (string) أو None لو فشلت.
-    """
     amount_egp = SUBSCRIPTION_MONTHLY if billing_cycle == "monthly" else SUBSCRIPTION_YEARLY
     amount_cents = int(round(amount_egp * 100))
 
@@ -89,13 +76,7 @@ def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str =
         resp = requests.post(PAYMOB_INTENTION_URL, json=payload, headers=headers, timeout=20)
         resp.raise_for_status()
         data = resp.json()
-
-        # ═══════════════════════════════════════
-        # 🆕 مؤقت: نطبع رد Paymob الكامل دايماً (نجح أو فشل)
-        # عشان نشوف تفاصيل الـ Intention الحقيقية. هنشيل السطر ده بعد التشخيص.
-        # ═══════════════════════════════════════
         print(f"📦 Paymob intention FULL response: {json.dumps(data, indent=2, ensure_ascii=False)}")
-
         client_secret = data.get("client_secret")
         if not client_secret:
             print(f"❌ Paymob intention response missing client_secret: {data}")
@@ -106,18 +87,10 @@ def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str =
         return None
 
 
-# ═══════════════════════════════════════
-# Flask App — لاستقبال Webhook من Paymob
-# ═══════════════════════════════════════
 flask_app = Flask(__name__)
 
 
 def verify_hmac(data: dict, received_hmac: str) -> bool:
-    """
-    يتحقق إن الطلب جاي فعلاً من Paymob ومش مزوّر.
-    حسب الـ documentation الرسمي لـ Paymob (transaction callback HMAC):
-    https://docs.paymob.com/docs/hmac-calculation
-    """
     ordered_fields = [
         "amount_cents", "created_at", "currency", "error_occured",
         "has_parent_transaction", "id", "integration_id", "is_3d_secure",
@@ -147,11 +120,6 @@ def verify_hmac(data: dict, received_hmac: str) -> bool:
 def paymob_webhook():
     try:
         payload = request.get_json(force=True)
-
-        # ═══════════════════════════════════════
-        # 🔍 مؤقت: نطبع الـ payload كامل عشان نشوف شكله الحقيقي
-        # (هنشيل السطرين دول بعد ما نتأكد من مكان tenant_code)
-        # ═══════════════════════════════════════
         print("═" * 50)
         print("📦 PAYMOB WEBHOOK — FULL PAYLOAD RECEIVED:")
         print(json.dumps(payload, indent=2, ensure_ascii=False))
@@ -183,9 +151,6 @@ def paymob_webhook():
 
 
 def activate_tenant(tenant_code: str, billing_cycle: str):
-    """
-    يفعّل المكتب في شيت Tenants: يغيّر status لـ active، ويبعت رسالة تأكيد للعميل.
-    """
     try:
         records = P005("Tenants")
         for i, r in enumerate(records, start=2):
@@ -203,10 +168,6 @@ def activate_tenant(tenant_code: str, billing_cycle: str):
 
 
 def send_telegram_message_sync(chat_id, text: str):
-    """
-    يبعت رسالة تيليجرام مباشرة عن طريق HTTP request بسيط (بدون عمل Application instance جديد).
-    أخف وأكثر أماناً من جوه Flask thread، وما يتعارض مع event loop البوت الأساسي.
-    """
     try:
         url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
         requests.post(url, json={
@@ -223,39 +184,35 @@ def run_flask():
     flask_app.run(host="0.0.0.0", port=port)
 
 ROUTE_MAP = {
-    "F-001": F001,   # إضافة عميل
-    "F-002": F002,   # عرض عميل
-    "F-003": F003,   # تعديل عميل
-    "F-004": RT001,  # إضافة موضوع
-    "F-005": RE001,  # إضافة حدث
-    "F-006": RE002,  # نتيجة حدث
-    "F-007": RS001,  # إرسال مرفقات
-    "F-008": RD002,  # طلب مستندات
-    "F-009": RM001,  # طلب عهدة
-    "F-010": RE003,  # عرض أحداث
-    "A-001": RA001,  # إضافة مساعد
-    "A-002": RA002,  # عرض مساعد
-    "T-002": RT002,  # عرض موضوعات عميل
-    "T-003": RT003,  # تغيير حالة موضوع
-    "T-004": RT004,  # أرشفة موضوع
-    "S-002": RS002,  # استلام شحنة
-    "S-003": RS003,  # تتبع شحنة
-    "M-002": RM002,  # تسوية عهدة
-    "N-001": RN001,  # إشعار للرئيس
-    "N-002": RN002,  # إشعار للعميل
-    "N-003": RN003,  # إشعار للمساعد
-    "D-001": RD001,  # رفع مستند وارد
-    "D-003": RD003,  # الموافقة على مستند
-    "D-004": RD004,  # رفض مستند
-    "D-005": RD005,  # عرض مستندات موضوع
-    "D-006": RD006,  # أرشفة مستندات
+    "F-001": F001,
+    "F-002": F002,
+    "F-003": F003,
+    "F-004": RT001,
+    "F-005": RE001,
+    "F-006": RE002,
+    "F-007": RS001,
+    "F-008": RD002,
+    "F-009": RM001,
+    "F-010": RE003,
+    "A-001": RA001,
+    "A-002": RA002,
+    "T-002": RT002,
+    "T-003": RT003,
+    "T-004": RT004,
+    "S-002": RS002,
+    "S-003": RS003,
+    "M-002": RM002,
+    "N-001": RN001,
+    "N-002": RN002,
+    "N-003": RN003,
+    "D-001": RD001,
+    "D-003": RD003,
+    "D-004": RD004,
+    "D-005": RD005,
+    "D-006": RD006,
 }
 
-# ═══════════════════════════════════════
-# دالة مساعدة — جلب boss_chat_id من الـ tenant
-# ═══════════════════════════════════════
 def get_boss_id(context):
-    """إرجاع boss_chat_id الخاص بالمكتب، أو صاحب المنصة كـ fallback"""
     tenant = context.user_data.get("tenant", {})
     boss = tenant.get("boss_chat_id", "")
     if boss:
@@ -266,11 +223,6 @@ def get_boss_id(context):
     return BOSS_CHAT_ID
 
 def get_tenant_sheet(context, chat_id):
-    """
-    إرجاع sheet_name الخاص بمكتب المستخدم الحالي (Tenant) من context.user_data.
-    لو لأي سبب غير متوفر (مثلاً حالة قديمة أو خطأ غير متوقع)، يرجع SHEET_NAME
-    الافتراضي (شيت مستر جمال Of-001) كـ fallback آمن بدل ما يفشل الكود بالكامل.
-    """
     tenant = context.user_data.get("tenant", {})
     sheet_name = tenant.get("sheet_name", "")
     if sheet_name:
@@ -287,16 +239,69 @@ def get_tenant_sheet(context, chat_id):
     return SHEET_NAME
 
 def build_boss_dashboard_url(chat_id, tenant):
-    """
-    يبني رابط لوحة قيادة الرئيس الخاصة بمكتب معيّن، مع sheet_id الديناميكي.
-    """
     token = base64.b64encode(str(chat_id).encode()).decode()
     sheet_id = tenant.get("sheet_id", "")
     return f"https://aminalserr.com/amin_alsir_dashboard.html?t={token}&sid={sheet_id}"
 
 # ═══════════════════════════════════════
-# لوحات القيادة
+# فحص الاشتراك قبل أي عملية حساسة
 # ═══════════════════════════════════════
+async def check_subscription_or_block(update, context, chat_id) -> bool:
+    """
+    True = مسموح بالاستمرار. False = اتبعتت رسالة منع، يوقف الكولر فورًا.
+    """
+    result = MT008(chat_id)
+
+    if result["valid"]:
+        tenant = result.get("tenant") or {}
+        days_left = result.get("days_left")
+        if days_left is not None and days_left <= 2 and str(tenant.get("reminder_sent", "")).lower() != "yes":
+            billing_cycle = tenant.get("billing_cycle", "") or "monthly"
+            pay_link = create_payment_link(
+                tenant.get("tenant_code", ""), billing_cycle, tenant.get("office_name", "")
+            )
+            period_label = "فترتك التجريبية" if result["status"] == "trial" else "اشتراكك"
+            warn_text = f"⚠️ *تنبيه*\n\nباقي {days_left} يوم على انتهاء {period_label}."
+            if pay_link:
+                kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 اشترك دلوقتي", url=pay_link)]])
+                await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown", reply_markup=kb)
+            else:
+                await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown")
+            _mark_reminder_sent(chat_id)
+        return True
+
+    status = result["status"]
+    tenant = result.get("tenant") or {}
+
+    if status in ("trial_expired", "subscription_expired"):
+        billing_cycle = tenant.get("billing_cycle", "") or "monthly"
+        pay_link = create_payment_link(
+            tenant.get("tenant_code", ""), billing_cycle, tenant.get("office_name", "")
+        )
+        label = "انتهت فترتك التجريبية" if status == "trial_expired" else "انتهى اشتراكك"
+        text = f"⏰ *{label}*\n\nللاستمرار في استخدام أمين السر، يرجى الاشتراك."
+        if pay_link:
+            kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 اشترك الآن", url=pay_link)]])
+            await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown", reply_markup=kb)
+        else:
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=text + "\n\n(تعذر توليد رابط الدفع، تواصل مع الدعم)",
+                parse_mode="Markdown",
+            )
+    elif status == "pending_payment":
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="⏳ حسابك في انتظار تأكيد الدفع. أرسل /start لمتابعة الدفع.",
+            parse_mode="Markdown",
+        )
+    else:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="❌ تعذر التحقق من حالة اشتراكك. تواصل مع الدعم.",
+        )
+    return False
+
 def main_keyboard():
     return InlineKeyboardMarkup([
         [
@@ -359,7 +364,6 @@ def notifications_keyboard():
     ])
 
 def countries_keyboard():
-    """أزرار الدول العربية للتسجيل"""
     countries = [
         "مصر", "السعودية", "الإمارات", "الكويت",
         "قطر", "البحرين", "الأردن", "لبنان",
@@ -375,27 +379,18 @@ def countries_keyboard():
         rows.append(row)
     return InlineKeyboardMarkup(rows)
 
-# ═══════════════════════════════════════
-# Post Init
-# ═══════════════════════════════════════
 async def post_init(application):
     await application.bot.delete_webhook(drop_pending_updates=True)
     print("✅ Webhook deleted — bot started clean")
 
-# ═══════════════════════════════════════
-# Start
-# ═══════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     print(f"🆔 CHAT ID: {chat_id}")
 
-    # ── التحقق من Deep Link (تسجيل عميل أو مساعد أو اختيار باقة) ──
     args = context.args
     if args:
         param = args[0]
 
-        # ── تسجيل عميل ──
-        # شكل الرابط: client_{tenant_code}_{ref_code} — مثال: client_Of-005_Cl-003
         if param.startswith("client_"):
             parts = param.replace("client_", "").split("_")
             if len(parts) < 2:
@@ -440,8 +435,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ كود العميل غير صحيح. تواصل مع المكتب.")
             return
 
-        # ── تسجيل مساعد ──
-        # شكل الرابط: assistant_{tenant_code}_{ref_code} — مثال: assistant_Of-005_As-002
         elif param.startswith("assistant_"):
             parts = param.replace("assistant_", "").split("_")
             if len(parts) < 2:
@@ -486,8 +479,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("❌ كود المساعد غير صحيح. تواصل مع المكتب.")
             return
 
-        # ── اختيار باقة من صفحة الهبوط (شهري/سنوي) ──
-        # 🆕 الرابط الجاي من index.html شكله: ?start=plan_monthly أو ?start=plan_yearly
         elif param.startswith("plan_"):
             billing_cycle = param.replace("plan_", "")
             if billing_cycle not in ("monthly", "yearly"):
@@ -524,11 +515,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 )
             return
 
-    # ── التحقق من الاشتراك (الحالة العادية، بدون Deep Link) ──
     tenant = MT001(chat_id)
 
     if tenant and tenant.get("status") in EXISTING_TENANT_STATUSES:
-        # مكتب موجود فعلاً — فتح الداشبورد
         office_name = tenant.get("office_name", "المكتب")
         country = tenant.get("country", "مصر")
         context.user_data["tenant"] = tenant
@@ -543,7 +532,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_keyboard()
         )
     else:
-        # مكتب جديد — بدء التسجيل التلقائي
         context.user_data["routine"] = "REG"
         context.user_data["step"] = "office_name"
         context.user_data["data"] = {}
@@ -554,12 +542,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown"
         )
 
-# ═══════════════════════════════════════
-# 🔍 أمر اختباري مؤقت — /testpay
-# يطلب رابط دفع تجريبي من Paymob (Test mode) عشان نتأكد
-# إن create_payment_link() شغالة، ونشوف شكل الـ webhook الحقيقي.
-# (هنشيل الأمر ده بعد ما نخلص الاختبار)
-# ═══════════════════════════════════════
 async def testpay(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     test_tenant_code = "TEST-001"
@@ -576,9 +558,6 @@ async def testpay(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text("❌ فشل إنشاء رابط الدفع. شوف الـ Logs على Railway لمعرفة السبب.")
 
-# ═══════════════════════════════════════
-# Text Router
-# ═══════════════════════════════════════
 async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     routine = context.user_data.get("routine")
     step    = context.user_data.get("step")
@@ -591,7 +570,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     cancel_btn = [[{"text": "❌ إلغاء", "callback_data": "MENU-MAIN"}]]
     back_btn   = [[{"text": "🔙 القائمة", "callback_data": "MENU-MAIN"}]]
 
-    # ─── REG تسجيل مكتب جديد ───
     if routine == "REG":
         if step == "office_name":
             if not V001(text):
@@ -605,7 +583,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=countries_keyboard()
             )
 
-    # ─── F001 إضافة عميل ───
     elif routine == "F001":
         if step == "name":
             if not V001(text):
@@ -655,7 +632,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
 
-    # ─── F002 عرض بيانات عميل ───
     elif routine == "F002":
         if step == "code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -675,7 +651,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await T002(context, chat_id, msg, back_btn)
 
-    # ─── F003 تعديل بيانات عميل ───
     elif routine == "F003":
         if step == "code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -739,7 +714,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✅ *تم تعديل العنوان!*\n\n🏠 {text}", back_btn)
             await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n🏠 العنوان الجديد: {text}")
 
-    # ─── RA001 إضافة مساعد ───
     elif routine == "RA001":
         if step == "name":
             if not V001(text):
@@ -779,7 +753,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
-    # ─── RA002 عرض بيانات مساعد ───
     elif routine == "RA002":
         if step == "code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -798,7 +771,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await T002(context, chat_id, msg, back_btn)
 
-    # ─── RT001 إضافة موضوع ───
     elif routine == "RT001":
         if step == "client_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -829,7 +801,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
-    # ─── RT002 عرض موضوعات عميل ───
     elif routine == "RT002":
         if step == "client_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -843,7 +814,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 msg += f"🔹 `{t.get('topic_code','—')}` — {t.get('service_name', t.get('title','—'))} [{t.get('status','—')}]\n"
             await T002(context, chat_id, msg, back_btn)
 
-    # ─── RT003 تغيير حالة موضوع ───
     elif routine == "RT003":
         if step == "topic_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -866,7 +836,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
             )
 
-    # ─── RT004 أرشفة موضوع ───
     elif routine == "RT004":
         if step == "topic_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -886,7 +855,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
             )
 
-    # ─── RE001 إضافة حدث ───
     elif routine == "RE001":
         if step == "title":
             if not V001(text):
@@ -930,7 +898,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
-    # ─── RE002 نتيجة حدث ───
     elif routine == "RE002":
         if step == "event_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -958,7 +925,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل النتيجة!*\n\n📝 {data['result']}", back_btn)
 
-    # ─── RS001 إرسال مرفقات ───
     elif routine == "RS001":
         if step == "topic_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -987,7 +953,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
-    # ─── RS002 استلام شحنة ───
     elif routine == "RS002":
         if step == "shipment_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1006,7 +971,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل استلام الشحنة!*\n\n🔹 الكود: `{text}`\n📦 {shipment.get('sender','—')}", back_btn)
 
-    # ─── RS003 تتبع شحنة ───
     elif routine == "RS003":
         if step == "shipment_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1025,7 +989,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             await T002(context, chat_id, msg, back_btn)
 
-    # ─── RD002 طلب مستندات ───
     elif routine == "RD002":
         if step == "entity":
             if not V001(text):
@@ -1048,7 +1011,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
-    # ─── RD003 الموافقة على مستند ───
     elif routine == "RD003":
         if step == "doc_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1066,7 +1028,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
             await N001(context, get_boss_id(context), f"✅ موافقة على مستند\n🔹 الكود: {text}\n📄 {doc.get('doc_name','—')}")
 
-    # ─── RD004 رفض مستند ───
     elif routine == "RD004":
         if step == "doc_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1094,7 +1055,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n🔹 الكود: `{data['doc_code']}`\n📝 السبب: {text}", back_btn)
             await N001(context, get_boss_id(context), f"❌ رفض مستند\n🔹 الكود: {data['doc_code']}\n📝 السبب: {text}")
 
-    # ─── RD005 عرض مستندات موضوع ───
     elif routine == "RD005":
         if step == "topic_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1114,7 +1074,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     msg += f"🔹 {name} — {status}\n"
             await T002(context, chat_id, msg, back_btn)
 
-    # ─── RD006 أرشفة مستندات ───
     elif routine == "RD006":
         if step == "topic_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1134,7 +1093,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]
             )
 
-    # ─── RM001 طلب عهدة ───
     elif routine == "RM001":
         if step == "amount":
             if not V005(text):
@@ -1158,7 +1116,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
-    # ─── RM002 تسوية عهدة ───
     elif routine == "RM002":
         if step == "fund_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1184,7 +1141,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسوية العهدة!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 {data['amount']} جنيه", back_btn)
 
-    # ─── RN001 إشعار للرئيس ───
     elif routine == "RN001":
         if step == "text":
             if not V001(text):
@@ -1194,7 +1150,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للرئيس!*", back_btn)
 
-    # ─── RN002 إشعار للعميل ───
     elif routine == "RN002":
         if step == "client_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1221,7 +1176,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للعميل!*", back_btn)
 
-    # ─── RN003 إشعار للمساعد ───
     elif routine == "RN003":
         if step == "assistant_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1248,7 +1202,6 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للمساعد!*", back_btn)
 
-    # ─── RD001 رفع مستند وارد ───
     elif routine == "RD001":
         if step == "topic_code":
             sheet_name = get_tenant_sheet(context, chat_id)
@@ -1268,21 +1221,16 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["step"] = "file"
             await T002(context, chat_id, "📎 أرسل *الملف أو الصورة* الآن:", cancel_btn)
 
-# ═══════════════════════════════════════
-# Callback Router
-# ═══════════════════════════════════════
 async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     data = query.data
     chat_id = query.message.chat_id
 
-    # ─── اختيار الدولة — إكمال تسجيل مكتب جديد ───
     if data.startswith("COUNTRY-"):
         country = data.replace("COUNTRY-", "")
         office_name = context.user_data.get("data", {}).get("office_name", "")
 
-        # NEW: create a dedicated Sheet + Drive folder for this new tenant
         sheet_name, sheet_id = MT006(office_name, str(chat_id))
         folder_id = MT007(str(chat_id))
 
@@ -1293,10 +1241,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # ── تحديد حالة التسجيل: trial أم pending_payment ──
-        # لو المستخدم جاي من كارت باقة محددة (plan_monthly / plan_yearly) هتكون
-        # selected_billing_cycle موجودة في user_data (اتسجلت في دالة start()).
-        # لو جاي من "ابدأ الآن مجاناً" هتكون غير موجودة، فالحالة الافتراضية trial.
         billing_cycle = context.user_data.get("selected_billing_cycle", "")
         if billing_cycle:
             initial_status = "pending_payment"
@@ -1314,7 +1258,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data["tenant"] = tenant
 
             if initial_status == "pending_payment":
-                # توليد رابط دفع Paymob فعلي مباشر (بدون أي صفحة وسيطة)
                 pay_link = create_payment_link(code, billing_cycle, office_name)
                 cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"
 
@@ -1331,7 +1274,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         parse_mode="Markdown",
                     )
                 else:
-                    # فشل توليد رابط الدفع — نوضح للعميل ونوجهه لإعادة المحاولة
                     await query.edit_message_text(
                         f"✅ تم تسجيل مكتبك بنجاح (الكود: `{code}`)\n\n"
                         f"⚠️ حدث خطأ مؤقت في توليد رابط الدفع. "
@@ -1339,7 +1281,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         parse_mode="Markdown",
                     )
             else:
-                # trial — يستخدم البوت بالكامل لمدة TRIAL_DAYS أيام
                 dashboard_url = build_boss_dashboard_url(chat_id, tenant)
                 await query.edit_message_text(
                     f"✅ <b>تم تسجيل مكتبك بنجاح!</b>\n\n"
@@ -1371,7 +1312,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
         return
 
-    # ─── أرشفة مستندات موضوع ───
     if data == "ARCHIVE-DOCS-CONFIRM":
         sheet_name = get_tenant_sheet(context, chat_id)
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
@@ -1389,7 +1329,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await N001(context, get_boss_id(context), f"🗄️ تم أرشفة مستندات الموضوع: {topic_code}")
         return
 
-    # ─── أرشفة موضوع ───
     if data == "ARCHIVE-CONFIRM":
         sheet_name = get_tenant_sheet(context, chat_id)
         topic_code = context.user_data.get("data", {}).get("topic_code", "")
@@ -1454,6 +1393,8 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "MENU-INBOX":
         await query.edit_message_text("💬 *بريد الإشعارات*\nاختر نوع الإشعار:", parse_mode="Markdown", reply_markup=notifications_keyboard())
     elif data in ROUTE_MAP:
+        if not await check_subscription_or_block(update, context, chat_id):
+            return
         await ROUTE_MAP[data](update, context)
     else:
         await query.edit_message_text(
@@ -1462,9 +1403,6 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 رجوع", callback_data="MENU-MAIN")]])
         )
 
-# ═══════════════════════════════════════
-# File Router
-# ═══════════════════════════════════════
 async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     routine = context.user_data.get("routine")
     step    = context.user_data.get("step")
@@ -1537,9 +1475,6 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, "❌ حدث خطأ أثناء الرفع.", back_btn)
             context.user_data.clear()
 
-# ═══════════════════════════════════════
-# Main
-# ═══════════════════════════════════════
 if __name__ == "__main__":
     time.sleep(5)
     app = (
@@ -1554,14 +1489,8 @@ if __name__ == "__main__":
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
 
-    # ═══════════════════════════════════════
-    # تشغيل Flask (Paymob webhook) في Thread منفصل، جنب البوت
-    # ═══════════════════════════════════════
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
     print("✅ Flask webhook thread started")
 
     app.run_polling(drop_pending_updates=True)
-
-
-
