@@ -284,67 +284,22 @@ function showToast(msg,isError=false){const t=document.getElementById('toast');t
 
 
 
-<script>
-/* =========================================================
-   منع إيماءة الرجوع في متصفحات الموبايل
-   الطبقة 1: overscroll-behavior في CSS (أعلاه)
-   الطبقة 2: history.pushState يمنع الرجوع في التاريخ
-   الطبقة 3: pageshow يجبر reload لو الصفحة رجعت من كاش
-   ========================================================= */
-(function() {
-  // الطبقة 2: اضغط على التاريخ عشان ميرجعش للصفحة اللي قبلها
-  history.pushState(null, null, window.location.href);
-  window.addEventListener('popstate', function() {
-    history.pushState(null, null, window.location.href);
-  });
 
-  // الطبقة 3: لو رجع من bfcache، اجبر إعادة التحميل
-  window.addEventListener('pageshow', function(event) {
-    if (event.persisted) {
-      window.location.reload();
-    }
-  });
-})();
-</script>
+
+
+
+
 
 <script>
-/* =========================================================
-   منع إيماءة الرجوع في متصفحات الموبايل
-   الطبقة 1: overscroll-behavior في CSS (أعلاه)
-   الطبقة 2: history.pushState يمنع الرجوع في التاريخ
-   الطبقة 3: pageshow يجبر reload لو الصفحة رجعت من كاش
-   ========================================================= */
+/* منع الرجوع للصفحات القديمة على متصفحات الموبايل
+   الطريقة: history.go(1) يرجع للأمام فور ما المتصفح يحاول الرجوع */
 (function() {
-  // الطبقة 2: اضغط على التاريخ عشان ميرجعش للصفحة اللي قبلها
   history.pushState(null, null, window.location.href);
+
   window.addEventListener('popstate', function() {
-    history.pushState(null, null, window.location.href);
+    history.go(1);
   });
 
-  // الطبقة 3: لو رجع من bfcache، اجبر إعادة التحميل
-  window.addEventListener('pageshow', function(event) {
-    if (event.persisted) {
-      window.location.reload();
-    }
-  });
-})();
-</script>
-
-<script>
-/* =========================================================
-   منع إيماءة الرجوع في متصفحات الموبايل
-   الطبقة 1: overscroll-behavior في CSS (أعلاه)
-   الطبقة 2: history.pushState يمنع الرجوع في التاريخ
-   الطبقة 3: pageshow يجبر reload لو الصفحة رجعت من كاش
-   ========================================================= */
-(function() {
-  // الطبقة 2: اضغط على التاريخ عشان ميرجعش للصفحة اللي قبلها
-  history.pushState(null, null, window.location.href);
-  window.addEventListener('popstate', function() {
-    history.pushState(null, null, window.location.href);
-  });
-
-  // الطبقة 3: لو رجع من bfcache، اجبر إعادة التحميل
   window.addEventListener('pageshow', function(event) {
     if (event.persisted) {
       window.location.reload();
