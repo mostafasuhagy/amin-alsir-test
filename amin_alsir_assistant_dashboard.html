@@ -13,7 +13,7 @@
 <title>أمين السر — لوحة المساعد</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
 <style>
-html, body { overscroll-behavior-y: contain; }
+html, body { overscroll-behavior: contain; touch-action: pan-y; }
 :root{
   --navy:#0D1B4B;--navy2:#162258;--gold:#F5C518;--gold2:#E8B400;--yellow:#FFE600;
   --white:#FFFFFF;--gray:#94A3B8;--green:#22C55E;--blue:#4F8EF7;--red:#EF4444;
@@ -282,15 +282,29 @@ function showToast(msg,isError=false){const t=document.getElementById('toast');t
 </script>
 
 
+
+
 <script>
-window.addEventListener('pageshow', function(event) {
-  if (event.persisted) {
-    // الصفحة رجعت من كاش المتصفح (bfcache) — نجبر إعادة تحميل كاملة
-    // عشان نضمن إن البيانات المعروضة هي أحدث بيانات من الشيت ومش
-    // نسخة قديمة محفوظة محليًا لمكتب تاني
-    window.location.reload();
-  }
-});
+/* =========================================================
+   منع إيماءة الرجوع في متصفحات الموبايل
+   الطبقة 1: overscroll-behavior في CSS (أعلاه)
+   الطبقة 2: history.pushState يمنع الرجوع في التاريخ
+   الطبقة 3: pageshow يجبر reload لو الصفحة رجعت من كاش
+   ========================================================= */
+(function() {
+  // الطبقة 2: اضغط على التاريخ عشان ميرجعش للصفحة اللي قبلها
+  history.pushState(null, null, window.location.href);
+  window.addEventListener('popstate', function() {
+    history.pushState(null, null, window.location.href);
+  });
+
+  // الطبقة 3: لو رجع من bfcache، اجبر إعادة التحميل
+  window.addEventListener('pageshow', function(event) {
+    if (event.persisted) {
+      window.location.reload();
+    }
+  });
+})();
 </script>
 </body>
 </html>
