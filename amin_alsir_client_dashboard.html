@@ -254,11 +254,11 @@ async function resolveClient(){
   const urlCode = params.get('c');
   const clients = await fetchSheet('Clients');
   let found = null;
-  if (CLIENT_CHAT_ID) {
-    found = clients.find(c => String(c.telegram_chat_id || '').trim() === String(CLIENT_CHAT_ID).trim());
-  }
-  if (!found && urlCode) {
+  if (urlCode) {
     found = clients.find(c => c.client_code === urlCode);
+  }
+  if (!found && CLIENT_CHAT_ID) {
+    found = clients.find(c => String(c.telegram_chat_id || '').trim() === String(CLIENT_CHAT_ID).trim());
   }
   if (found) {
     CLIENT_CODE = found.client_code;
