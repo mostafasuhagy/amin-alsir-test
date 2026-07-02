@@ -298,5 +298,30 @@ function showToast(msg,isError=false){const t=document.getElementById('toast');t
   });
 })();
 </script>
+
+<script>
+(function() {
+  var STORAGE_KEY = 'aminalsir_client_url';
+  var params = new URLSearchParams(window.location.search);
+  var t = params.get('t'); var sid = params.get('sid');
+  if (t && sid) {
+    try { localStorage.setItem(STORAGE_KEY, window.location.href); } catch(e) {}
+  } else {
+    var savedUrl = null;
+    try { savedUrl = localStorage.getItem(STORAGE_KEY); } catch(e) {}
+    if (savedUrl) { window.location.replace(savedUrl); return; }
+    else {
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.style.cssText = 'margin:0;background:#ffd700;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:Arial,sans-serif;direction:rtl';
+        document.body.innerHTML = '<div style="text-align:center;padding:30px;max-width:320px"><div style="font-size:60px;margin-bottom:20px">🔐</div><h2 style="color:#0D1B4B;margin-bottom:15px">أمين السر</h2><p style="color:#333;font-size:16px;line-height:1.6">يرجى فتح لوحة العميل من الرابط الذي أرسله لك المكتب عبر تيليجرام</p></div>';
+      });
+      return;
+    }
+  }
+  history.pushState(null, null, window.location.href);
+  window.addEventListener('popstate', function() { history.go(1); });
+  window.addEventListener('pageshow', function(event) { if (event.persisted) { window.location.reload(); } });
+})();
+</script>
 </body>
 </html>
