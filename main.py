@@ -421,7 +421,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
                 token = base64.b64encode(str(chat_id).encode()).decode()
-                dashboard_url = f"https://aminalserr.com/amin_alsir_client_dashboard.html?t={token}&sid={sheet_id}"
+                # ── إضافة client_code (c) صراحة في الرابط ──
+                # هذا يمنع أي التباس لو نفس حساب التليجرام مرتبط
+                # بأكثر من عميل (كحالة اختبار)، ويجعل الداشبورد يتعرف
+                # على العميل الصحيح بشكل مؤكد بدل الاعتماد على chat_id فقط.
+                dashboard_url = f"https://aminalserr.com/amin_alsir_client_dashboard.html?t={token}&sid={sheet_id}&c={ref_code}"
                 await update.message.reply_text(
                     f"🔗 <b>رابط لوحة القيادة الخاصة بك:</b>\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="HTML"
@@ -465,7 +469,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
                 token = base64.b64encode(str(chat_id).encode()).decode()
-                dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}&sid={sheet_id}"
+                # ── إضافة assistant_code (c) صراحة في الرابط ──
+                # نفس منطق حماية لوحة العميل، لتفادي أي التباس بين المساعدين.
+                dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}&sid={sheet_id}&c={ref_code}"
                 await update.message.reply_text(
                     f"🔗 <b>رابط لوحة القيادة الخاصة بك:</b>\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n📌 احفظ هذا الرابط في مفضلاتك",
                     parse_mode="HTML"
