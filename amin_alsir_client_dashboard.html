@@ -246,10 +246,43 @@ function getClientCode(){const params=new URLSearchParams(window.location.search
 const CLIENT_CHAT_ID=getClientCode();
 const BOT_TOKEN='8716122412:AAHREvaHnoYsydnaPevVa5JDrT0wnxzz3Mk';
 const BOSS_CHAT_ID='8653723225';
-const CLIENT_CODE='Cl-001';
-const CLIENT_NAME='العميل الكريم';
+let CLIENT_CODE = null;
+let CLIENT_NAME = 'العميل الكريم';
+
+async function resolveClient(){
+  const params = new URLSearchParams(window.location.search);
+  const urlCode = params.get('c');
+  const clients = await fetchSheet('Clients');
+  let found = null;
+  if (CLIENT_CHAT_ID) {
+    found = clients.find(c => String(c.telegram_chat_id || '').trim() === String(CLIENT_CHAT_ID).trim());
+  }
+  if (!found && urlCode) {
+    found = clients.find(c => c.client_code === urlCode);
+  }
+  if (found) {
+    CLIENT_CODE = found.client_code;
+    CLIENT_NAME = found.client_name || 'العميل الكريم';
+    return true;
+  }
+  return false;
+}
 let allTopics=[],allEvents=[],selectedTopic=null;
-window.onload=async()=>{updateClientInfo();await loadAllData();document.getElementById('loading').style.opacity='0';setTimeout(()=>document.getElementById('loading').style.display='none',500);};
+window.onload=async()=>{
+  const ok = await resolveClient();
+  if (!ok) {
+    document.getElementById('loading').innerHTML = '<div style=
+"
+text-align:center;padding:30px;max-width:320px
+"
+>Please open this dashboard from the link your office sent you on Telegram.</div>';
+    return;
+  }
+  updateClientInfo();
+  await loadAllData();
+  document.getElementById('loading').style.opacity='0';
+  setTimeout(()=>document.getElementById('loading').style.display='none',500);
+};
 function updateClientInfo(){document.getElementById('clientBadge').textContent=CLIENT_CODE;document.getElementById('welcomeName').textContent='مرحباً، '+CLIENT_NAME;document.getElementById('welcomeCode').textContent='🔹 الكود: '+CLIENT_CODE;}
 async function fetchSheet(name){try{const url=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(name)}`;const res=await fetch(url);const csv=await res.text();return parseCSV(csv);}catch(e){return[];}}
 function parseCSV(csv){const lines=csv.trim().split('\n');if(lines.length<2)return[];const headers=lines[0].split(',').map(h=>h.replace(/"/g,'').trim());return lines.slice(1).map(line=>{const vals=parseCSVLine(line);const obj={};headers.forEach((h,i)=>obj[h]=(vals[i]||'').replace(/"/g,'').trim());return obj;}).filter(r=>Object.values(r).some(v=>v));}
