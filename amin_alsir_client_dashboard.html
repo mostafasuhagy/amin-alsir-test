@@ -271,11 +271,7 @@ let allTopics=[],allEvents=[],selectedTopic=null;
 window.onload=async()=>{
   const ok = await resolveClient();
   if (!ok) {
-    document.getElementById('loading').innerHTML = '<div style=
-"
-text-align:center;padding:30px;max-width:320px
-"
->Please open this dashboard from the link your office sent you on Telegram.</div>';
+    document.getElementById('loading').innerHTML = 'Please open this dashboard from the link your office sent you on Telegram.';
     return;
   }
   updateClientInfo();
