@@ -993,10 +993,21 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["description"] = text
             sheet_name = get_tenant_sheet(context, chat_id)
             code = G001("Sh", "Shipments", sheet_name)
+            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Shipments الفعلية بالظبط:
+            # shipment_code | topic_code | sender | receiver | send_date | file_name |
+            # file_type | pickup_location | receive_status | receive_date | notes
             ok = P003("Shipments", [
-                code, data["topic_code"], data["description"],
-                "", datetime.now().strftime("%Y-%m-%d %H:%M"),
-                "", "", "", "صادر",
+                code,                     # A shipment_code
+                data["topic_code"],       # B topic_code
+                "",                       # C sender (غير مستخدم حاليًا)
+                "",                       # D receiver (غير مستخدم حاليًا)
+                datetime.now().strftime("%Y-%m-%d %H:%M"),  # E send_date
+                data["description"],      # F file_name (وصف المرفقات)
+                "",                       # G file_type
+                "",                       # H pickup_location
+                "معلق",                   # I receive_status
+                "",                       # J receive_date
+                "",                       # K notes
             ], sheet_name)
             context.user_data.clear()
             if ok:
