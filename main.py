@@ -799,7 +799,21 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["event_type"] = text
             sheet_name = get_tenant_sheet(context, chat_id)
             code = G001("Tp", "Topics", sheet_name)
-            ok = P003("Topics", [code, data["client_code"], data["client_name"], data["title"], data["event_type"], "جديد", datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
+            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Topics الفعلية بالظبط:
+            # topic_code | client_code | client_name | service_code | service_name |
+            # assistant_code | assistant_name | date_opened | status | notes
+            ok = P003("Topics", [
+                code,                     # A topic_code
+                data["client_code"],      # B client_code
+                data["client_name"],      # C client_name
+                "",                       # D service_code (غير مستخدم حاليًا)
+                data["title"],            # E service_name (عنوان الموضوع)
+                "",                       # F assistant_code (غير مستخدم حاليًا)
+                "",                       # G assistant_name (غير مستخدم حاليًا)
+                datetime.now().strftime("%Y-%m-%d %H:%M"),  # H date_opened
+                "جديد",                   # I status
+                data["event_type"],       # J notes (نوع الموضوع)
+            ], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}\n👤 {data['client_name']}", back_btn)
@@ -1343,8 +1357,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Topics", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(topic_code):
-                    P004("Topics", i, 6, "مؤرشف", sheet_name)
-                    P004("Topics", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)
+                    P004("Topics", i, 9, "مؤرشف", sheet_name)  # عمود I = status
                     break
         context.user_data.clear()
         await query.edit_message_text(
@@ -1363,7 +1376,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Topics", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(topic_code):
-                    P004("Topics", i, 6, new_status, sheet_name)
+                    P004("Topics", i, 9, new_status, sheet_name)  # عمود I = status
                     break
         context.user_data.clear()
         await query.edit_message_text(
