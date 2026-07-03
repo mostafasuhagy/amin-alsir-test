@@ -238,6 +238,41 @@ def get_tenant_sheet(context, chat_id):
 
     return SHEET_NAME
 
+async def _save_new_topic(context, chat_id, data, assistant_code="", assistant_name=""):
+    """
+    حفظ موضوع جديد في شيت Topics — بتتنادى إما بعد إدخال كود مساعد صحيح
+    أو بعد الضغط على زر (تخطي) في حالة عدم تحديد مساعد.
+    """
+    sheet_name = get_tenant_sheet(context, chat_id)
+    code = G001("Tp", "Topics", sheet_name)
+    # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Topics الفعلية بالظبط:
+    # topic_code | client_code | client_name | service_code | service_name |
+    # assistant_code | assistant_name | date_opened | status | notes
+    ok = P003("Topics", [
+        code,                     # A topic_code
+        data["client_code"],      # B client_code
+        data["client_name"],      # C client_name
+        "",                       # D service_code (غير مستخدم حاليًا)
+        data["title"],            # E service_name (عنوان الموضوع)
+        assistant_code,           # F assistant_code
+        assistant_name,           # G assistant_name
+        datetime.now().strftime("%Y-%m-%d %H:%M"),  # H date_opened
+        "جديد",                   # I status
+        data["event_type"],       # J notes (نوع الموضوع)
+    ], sheet_name)
+    context.user_data.clear()
+    if ok:
+        assistant_line = f"\n👨‍💼 المساعد: {assistant_name}" if assistant_name else ""
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}\n👤 {data['client_name']}{assistant_line}",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
+        )
+        await N001(context, get_boss_id(context), f"📁 موضوع جديد: {data['title']}\n🔹 الكود: {code}\n👤 العميل: {data['client_name']}{assistant_line}")
+    else:
+        await context.bot.send_message(chat_id=chat_id, text="❌ حدث خطأ في الحفظ.")
+
 def build_boss_dashboard_url(chat_id, tenant):
     token = base64.b64encode(str(chat_id).encode()).decode()
     sheet_id = tenant.get("sheet_id", "")
@@ -797,29 +832,25 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await T002(context, chat_id, "📋 أدخل *نوع الموضوع* (مثال: طلاق / ميراث / عقار):", cancel_btn)
         elif step == "event_type":
             data["event_type"] = text
+            context.user_data["step"] = "assistant_code"
+            await T002(context, chat_id,
+                "👨‍💼 أدخل *كود المساعد المسؤول* عن القضية (أو اضغط تخطي لو مفيش):",
+                [
+                    [{"text": "⏭️ تخطي", "callback_data": "SKIP-ASSISTANT"}],
+                    [{"text": "❌ إلغاء", "callback_data": "MENU-MAIN"}],
+                ]
+            )
+        elif step == "assistant_code":
             sheet_name = get_tenant_sheet(context, chat_id)
-            code = G001("Tp", "Topics", sheet_name)
-            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Topics الفعلية بالظبط:
-            # topic_code | client_code | client_name | service_code | service_name |
-            # assistant_code | assistant_name | date_opened | status | notes
-            ok = P003("Topics", [
-                code,                     # A topic_code
-                data["client_code"],      # B client_code
-                data["client_name"],      # C client_name
-                "",                       # D service_code (غير مستخدم حاليًا)
-                data["title"],            # E service_name (عنوان الموضوع)
-                "",                       # F assistant_code (غير مستخدم حاليًا)
-                "",                       # G assistant_name (غير مستخدم حاليًا)
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # H date_opened
-                "جديد",                   # I status
-                data["event_type"],       # J notes (نوع الموضوع)
-            ], sheet_name)
-            context.user_data.clear()
-            if ok:
-                await T002(context, chat_id, f"✅ *تم إضافة الموضوع!*\n\n🔹 الكود: `{code}`\n📋 {data['title']}\n👤 {data['client_name']}", back_btn)
-                await N001(context, get_boss_id(context), f"📁 موضوع جديد: {data['title']}\n🔹 الكود: {code}\n👤 العميل: {data['client_name']}")
-            else:
-                await T001(context, chat_id, "❌ حدث خطأ.")
+            assistant = P002("Assistants", text, sheet_name)
+            if not assistant:
+                await T001(context, chat_id, "❌ كود المساعد غير موجود. أدخل كود صحيح أو اضغط تخطي:")
+                return
+            await _save_new_topic(
+                context, chat_id, data,
+                assistant_code=text,
+                assistant_name=assistant.get("assistant_name", "")
+            )
 
     elif routine == "RT002":
         if step == "client_code":
@@ -1330,6 +1361,15 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(
                 "❌ حدث خطأ في التسجيل. أرسل /start للمحاولة مرة أخرى."
             )
+        return
+
+    if data == "SKIP-ASSISTANT":
+        topic_data = context.user_data.get("data", {})
+        if topic_data.get("client_code") and topic_data.get("title") and topic_data.get("event_type"):
+            await _save_new_topic(context, chat_id, topic_data)
+        else:
+            context.user_data.clear()
+            await query.edit_message_text("❌ حدث خطأ — ابدأ من جديد.")
         return
 
     if data == "ARCHIVE-DOCS-CONFIRM":
