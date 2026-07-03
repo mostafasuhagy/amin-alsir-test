@@ -9,10 +9,9 @@ from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
 CALENDAR_ID = "mostafa.suhagy@gmail.com"
-DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
+DRIVE_FOLDER_ID = "0AGGAp8sywzBkUk9PVA"  # تم تصحيحه ليشير لجذر Shared Drive amin_alsir_docs (كان يشاور على مجلد قديم في My Drive)
 SHARED_DRIVE_ID = "0AGGAp8sywzBkUk9PVA"
 TENANTS_SHEET = "amin_alsir_cases_new_V2"
-TRIAL_DAYS = 7
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -20,6 +19,9 @@ SCOPES = [
     "https://www.googleapis.com/auth/calendar",
 ]
 
+# ─────────────────────────────────────────────
+# المناطق الزمنية للدول العربية
+# ─────────────────────────────────────────────
 ARAB_TIMEZONES = {
     "مصر":       "Africa/Cairo",
     "السعودية":  "Asia/Riyadh",
@@ -52,9 +54,9 @@ def NOW_LOCAL(country="مصر"):
     except Exception:
         return datetime.now().strftime("%Y-%m-%d %H:%M")
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Multi-Tenant — إدارة المشتركين
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def MT001(chat_id):
     try:
         records = P005("Tenants", TENANTS_SHEET)
@@ -66,28 +68,22 @@ def MT001(chat_id):
         print(f"❌ MT001: {e}")
         return None
 
-def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id="",
-           status="trial", billing_cycle="", sheet_id=""):
+def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id=""):
     try:
         code = G001("Of", "Tenants", TENANTS_SHEET)
-        today_str = NOW_LOCAL(country)[:10]  # YYYY-MM-DD فقط لأعتماد التاريخ
         ok = P003("Tenants", [
-            code,                  # A  tenant_code
-            str(chat_id),          # B  chat_id
-            office_name,           # C  office_name
-            country,                # D  country
-            GET_TIMEZONE(country), # E  timezone
-            str(boss_chat_id),     # F  boss_chat_id
-            sheet_name,             # G  sheet_name
-            drive_folder_id,        # H  drive_folder_id
-            status,                 # I  status (trial / pending_payment / active)
-            NOW_LOCAL(country),    # J  date_added
-            today_str,               # K  trial_start_date
-            billing_cycle,           # L  billing_cycle
-            "",                       # M  subscription_end_date (تتحدد بعد الدفع/التهاء التجربة)
-            sheet_id,                  # N  sheet_id
+            code,
+            str(chat_id),
+            office_name,
+            country,
+            GET_TIMEZONE(country),
+            str(boss_chat_id),
+            sheet_name,
+            drive_folder_id,
+            "active",
+            NOW_LOCAL(country),
         ], TENANTS_SHEET)
-        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country}) — status={status}")
+        print(f"✅ MT002: تم تسجيل مكتب — {office_name} ({country})")
         return code if ok else None
     except Exception as e:
         print(f"❌ MT002: {e}")
@@ -135,46 +131,23 @@ def MT006(office_name, tenant_code):
 
         sheet_name = f"amin_alsir_{tenant_code}"
 
-        file_metadata = {
-            "name": sheet_name,
-            "mimeType": "application/vnd.google-apps.spreadsheet",
-            "parents": [SHARED_DRIVE_ID],
-        }
-        created_file = drive_service.files().create(
-            body=file_metadata,
-            fields="id",
-            supportsAllDrives=True
-        ).execute()
-        spreadsheet_id = created_file["id"]
-        print(f"✅ MT006: تم إنشاء الشيت داخل Shared Drive — {sheet_name} ({spreadsheet_id})")
-
-        add_sheets_body = {
-            "requests": [
-                {"addSheet": {"properties": {"title": "Clients"}}},
-                {"addSheet": {"properties": {"title": "Topics"}}},
-                {"addSheet": {"properties": {"title": "Events"}}},
-                {"addSheet": {"properties": {"title": "Documents"}}},
-                {"addSheet": {"properties": {"title": "Shipments"}}},
-                {"addSheet": {"properties": {"title": "Custody"}}},
-                {"addSheet": {"properties": {"title": "Assistants"}}},
-                {"addSheet": {"properties": {"title": "Notifications"}}},
-                {"addSheet": {"properties": {"title": "Services"}}},
+        spreadsheet = sheets_service.spreadsheets().create(body={
+            "properties": {"title": sheet_name},
+            "sheets": [
+                {"properties": {"title": "Clients"}},
+                {"properties": {"title": "Topics"}},
+                {"properties": {"title": "Events"}},
+                {"properties": {"title": "Documents"}},
+                {"properties": {"title": "Shipments"}},
+                {"properties": {"title": "Custody"}},
+                {"properties": {"title": "Assistants"}},
+                {"properties": {"title": "Notifications"}},
+                {"properties": {"title": "Services"}},
             ]
-        }
-        batch_response = sheets_service.spreadsheets().batchUpdate(
-            spreadsheetId=spreadsheet_id,
-            body=add_sheets_body
-        ).execute()
-        print(f"✅ MT006: تم إضافة كل tabs الجديدة")
+        }).execute()
 
-        try:
-            sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=spreadsheet_id,
-                body={"requests": [{"deleteSheet": {"sheetId": 0}}]}
-            ).execute()
-            print(f"✅ MT006: تم حذف Sheet1 الافتراضي")
-        except Exception as e:
-            print(f"⚠️ MT006: فشل حذف Sheet1 الافتراضي — {e}")
+        spreadsheet_id = spreadsheet["spreadsheetId"]
+        print(f"✅ MT006: تم إنشاء الشيت — {sheet_name} ({spreadsheet_id})")
 
         headers_data = [
             {"range": "Clients!A1",       "values": [["client_code", "client_name", "national_id", "mobile", "address", "date_added", "notes", "telegram_chat_id"]]},
@@ -192,41 +165,23 @@ def MT006(office_name, tenant_code):
             spreadsheetId=spreadsheet_id,
             body={"valueInputOption": "RAW", "data": headers_data}
         ).execute()
-        print(f"✅ MT006: تم إضافة كل الهيدرز لكل tabs")
+        print(f"✅ MT006: تم إضافة الهيدرز لكل الـ tabs")
 
-        try:
-            drive_service.permissions().create(
-                fileId=spreadsheet_id,
-                body={
-                    "type": "user",
-                    "role": "writer",
-                    "emailAddress": "mostafa.suhagy@gmail.com"
-                },
-                supportsAllDrives=True
-            ).execute()
-            print(f"✅ MT006: تم مشاركة الشيت مع حساب Apps Script (mostafa.suhagy@gmail.com)")
-        except Exception as e:
-            print(f"⚠️ MT006: فشلت مشاركة الشيت مع حساب Apps Script — {e}")
-
-        try:
-            drive_service.permissions().create(
-                fileId=spreadsheet_id,
-                body={
-                    "type": "anyone",
-                    "role": "reader"
-                },
-                supportsAllDrives=True
-            ).execute()
-            print(f"✅ MT006: تم تفعيل القراءة العامة للشيت (Anyone with the link - Viewer)")
-        except Exception as e:
-            print(f"⚠️ MT006: فشل تفعيل القراءة العامة للشيت — {e}")
+        drive_service.permissions().create(
+            fileId=spreadsheet_id,
+            body={
+                "type": "user",
+                "role": "writer",
+                "emailAddress": "amin-alsir-bot@amin-alsir.iam.gserviceaccount.com"
+            }
+        ).execute()
+        print(f"✅ MT006: تم مشاركة الشيت مع Service Account")
 
         return sheet_name, spreadsheet_id
 
     except Exception as e:
         print(f"❌ MT006: {e}")
         return None, None
-
 
 def MT007(tenant_code):
     try:
@@ -238,7 +193,7 @@ def MT007(tenant_code):
         folder_metadata = {
             "name":     folder_name,
             "mimeType": "application/vnd.google-apps.folder",
-            "parents":  [SHARED_DRIVE_ID],
+            "parents":  [DRIVE_FOLDER_ID],
         }
         folder = service.files().create(
             body=folder_metadata,
@@ -253,9 +208,9 @@ def MT007(tenant_code):
         print(f"❌ MT007: {e}")
         return None
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # P001 — الاتصال بـ Google Sheets
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def P001(sheet_name=SHEET_NAME):
     try:
         creds_json = os.environ.get("GOOGLE_CREDENTIALS")
@@ -267,9 +222,9 @@ def P001(sheet_name=SHEET_NAME):
         print(f"❌ P001: {e}")
         return None
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # P001C — الاتصال بـ Google Calendar
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def P001C():
     try:
         from googleapiclient.discovery import build
@@ -282,9 +237,9 @@ def P001C():
         print(f"❌ P001C: {e}")
         return None
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # P001D — الاتصال بـ Google Drive (Shared Drive)
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def P001D():
     try:
         from googleapiclient.discovery import build
@@ -297,9 +252,9 @@ def P001D():
         print(f"❌ P001D: {e}")
         return None
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Google Sheets Functions
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def P002(tab, ref_code, sheet_name=SHEET_NAME):
     try:
         ws = P001(sheet_name).worksheet(tab)
@@ -342,39 +297,22 @@ def P006(tab, col_name, value, sheet_name=SHEET_NAME):
         return []
 
 def G001(prefix, tab, sheet_name=SHEET_NAME):
-    """
-    يولّد كود جديد (مثال: Of-003, Cl-015) بالاعتماد على أعلى رقم موجود فعليًا
-    في الكود (العمود الأول) بدل عدّ عدد الصفوف الحالية.
-    سبب التعديل: العدّ بالصفوف كان بيسبب تصادم أكواد لو اتمسح أي صف قديم
-    (مثلاً صف مكتب اتمسح يدويًا)، لأن العدّ كان بينزل ويرجع يولّد كود
-    قديم اتاخد بالفعل.
-    """
     try:
-        records = P005(tab, sheet_name)
-        max_num = 0
-        for r in records:
-            if not r:
-                continue
-            code = str(list(r.values())[0]).strip()
-            if code.startswith(prefix + "-"):
-                suffix = code[len(prefix) + 1:]
-                try:
-                    num = int(suffix)
-                    if num > max_num:
-                        max_num = num
-                except ValueError:
-                    continue
-        return f"{prefix}-{max_num + 1:03d}"
+        count = len(P005(tab, sheet_name)) + 1
+        return f"{prefix}-{count:03d}"
     except Exception as e:
         print(f"❌ G001: {e}")
         return f"{prefix}-001"
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Notification Logger
-# ═══════════════════════════════════════
-def LOG_NOTIFICATION(notif_type, ref_code, name, message):
+# ─────────────────────────────────────────────
+def LOG_NOTIFICATION(notif_type, ref_code, name, message, sheet_name=SHEET_NAME):
+    # ملحوظة مهمة: sheet_name لازم تتحدد دايمًا من المكتب (tenant)
+    # المرسل صراحة من main.py — عشان كل مكتب يسجّل إشعاراته في شيته
+    # الخاص، مش في الشيت العام الافتراضي.
     try:
-        code = G001("Nt", "Notifications")
+        code = G001("Nt", "Notifications", sheet_name)
         P003("Notifications", [
             code,
             notif_type,
@@ -382,14 +320,14 @@ def LOG_NOTIFICATION(notif_type, ref_code, name, message):
             name,
             message,
             datetime.now().strftime("%Y-%m-%d %H:%M"),
-        ])
+        ], sheet_name)
         print(f"✅ LOG_NOTIFICATION: {code} — {notif_type} — {name}")
     except Exception as e:
         print(f"❌ LOG_NOTIFICATION: {e}")
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Validators
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def V001(text):
     return bool(text) and isinstance(text, str) and len(text.strip()) >= 3
 
@@ -412,9 +350,9 @@ def V005(amount):
         return float(str(amount).replace(",", "")) > 0
     except: return False
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Google Calendar Functions
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def CAL001(title, date_str, time_str="", location="", description="", calendar_id=CALENDAR_ID):
     try:
         service = P001C()
@@ -516,9 +454,9 @@ def CAL005(event_id, result_text, calendar_id=CALENDAR_ID):
         print(f"❌ CAL005: {e}")
         return False
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Google Drive Functions
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
     try:
         from googleapiclient.http import MediaFileUpload
@@ -539,7 +477,7 @@ def DRV001(file_path, file_name, topic_code, folder_id=DRIVE_FOLDER_ID):
         file_metadata = {
             "name":    file_name,
             "parents": [sub_folder_id],
-        }
+            }
         media = MediaFileUpload(file_path, mimetype=mime_type, resumable=False)
         uploaded = service.files().create(
             body=file_metadata,
@@ -608,7 +546,7 @@ def DRV002(topic_code, folder_id=DRIVE_FOLDER_ID):
                 "created_time": f.get("createdTime", "")[:10],
             })
 
-        print(f"✅ DRV002: تم جلب {len(files)} ملف لموضوع {topic_code}")
+        print(f"✅ DRV002: تم جلب {len(files)} ملف للموضوع {topic_code}")
         return files
 
     except Exception as e:
@@ -713,9 +651,9 @@ def DRV005(file_path, file_name, folder_id=DRIVE_FOLDER_ID):
         print(f"❌ DRV005: {e}")
         return None
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Telegram Message Functions
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 async def T001(context, chat_id, text):
     try:
         return await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
@@ -766,77 +704,79 @@ async def T005(context, chat_id, text, options):
         print(f"❌ T005: {e}")
         return None
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Notification Functions
-# ═══════════════════════════════════════
-async def N001(context, boss_chat_id, text):
+# ─────────────────────────────────────────────
+async def N001(context, boss_chat_id, text, sheet_name=SHEET_NAME):
+    # sheet_name لازم تتبعت من main.py دايمًا (شيت المكتب الحقيقي)،
+    # وإلا هيتسجل الإشعار غلط في الشيت العام الافتراضي.
     try:
         await context.bot.send_message(
             chat_id=boss_chat_id,
             text=f"🔔 *إشعار — أمين السر*\n\n{text}",
             parse_mode="Markdown"
         )
-        LOG_NOTIFICATION("رئيس", str(boss_chat_id), "المدير", text)
+        LOG_NOTIFICATION("رئيس", str(boss_chat_id), "المدير", text, sheet_name)
         return True
     except Exception as e:
         print(f"❌ N001: {e}")
         return False
 
-async def N002(context, client_chat_id, text):
+async def N002(context, client_chat_id, text, sheet_name=SHEET_NAME):
     try:
         await context.bot.send_message(
             chat_id=client_chat_id,
-            text=f"📨 *رسالة من مكتب المحاماة*\n\n{text}",
+            text=f"📩 *رسالة من مكتب المحاماة*\n\n{text}",
             parse_mode="Markdown"
         )
-        LOG_NOTIFICATION("عميل", str(client_chat_id), "عميل", text)
+        LOG_NOTIFICATION("عميل", str(client_chat_id), "عميل", text, sheet_name)
         return True
     except Exception as e:
         print(f"❌ N002: {e}")
         return False
 
-async def N003(context, assistant_chat_id, text):
+async def N003(context, assistant_chat_id, text, sheet_name=SHEET_NAME):
     try:
         await context.bot.send_message(
             chat_id=assistant_chat_id,
             text=f"📋 *مهمة جديدة — أمين السر*\n\n{text}",
             parse_mode="Markdown"
         )
-        LOG_NOTIFICATION("مساعد", str(assistant_chat_id), "مساعد", text)
+        LOG_NOTIFICATION("مساعد", str(assistant_chat_id), "مساعد", text, sheet_name)
         return True
     except Exception as e:
         print(f"❌ N003: {e}")
         return False
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Events Helper Functions
-# ═══════════════════════════════════════
-def C001(title, date, location=""):
+# ─────────────────────────────────────────────
+def C001(title, date, location="", sheet_name=SHEET_NAME):
     try:
         if not V001(title) or not V004(date): return None
-        success = P003("Events", [title, date, location, datetime.now().strftime("%Y-%m-%d %H:%M")])
+        success = P003("Events", [title, date, location, datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
         return {"title": title, "date": date, "location": location} if success else None
     except Exception as e:
         print(f"❌ C001: {e}")
         return None
 
-def C002(event_ref, updated_data):
+def C002(event_ref, updated_data, sheet_name=SHEET_NAME):
     try:
-        records = P005("Events")
+        records = P005("Events", sheet_name)
         for i, record in enumerate(records, start=2):
             if str(list(record.values())[0]) == str(event_ref):
                 for col, val in updated_data.items():
                     col_i = list(record.keys()).index(col) + 1
-                    P004("Events", i, col_i, val)
+                    P004("Events", i, col_i, val, sheet_name)
                 return True
         return False
     except Exception as e:
         print(f"❌ C002: {e}")
         return False
 
-def C003():
+def C003(sheet_name=SHEET_NAME):
     try:
-        records = P005("Events")
+        records = P005("Events", sheet_name)
         today = datetime.now().date()
         upcoming = []
         for r in records:
@@ -853,9 +793,9 @@ def C003():
         print(f"❌ C003: {e}")
         return []
 
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 # Link Functions
-# ═══════════════════════════════════════
+# ─────────────────────────────────────────────
 def L001(user_type, ref_code):
     try:
         token = hashlib.sha256(f"{user_type}:{ref_code}:{int(time.time())}".encode()).hexdigest()[:16]
@@ -881,91 +821,3 @@ def L003(link):
     except Exception as e:
         print(f"❌ L003: {e}")
         return None
-
-# ═══════════════════════════════════════
-# MT008 — فحص حالة الاشتراك وتحديثها تلقائيًا
-# ═══════════════════════════════════════
-def MT008(chat_id):
-    """
-    يفحص حالة اشتراك المكتب (trial / active) ويحدّث الحالة تلقائيًا في الشيت
-    لو انتهت الفترة التجريبية أو انتهى الاشتراك المدفوع.
-    يرجع dict: {valid, status, days_left, tenant}
-    fail-safe: أي خطأ غير متوقع يرجع valid=True عشان مايتقفلش البوت بالغلط
-    على مستخدم شغال فعلاً.
-    """
-    try:
-        tenant = MT001(chat_id)
-        if not tenant:
-            return {"valid": False, "status": "not_found", "days_left": None, "tenant": None}
-
-        status = tenant.get("status", "")
-        today = datetime.now().date()
-
-        if status == "trial":
-            trial_start = tenant.get("trial_start_date", "")
-            try:
-                start_date = datetime.strptime(str(trial_start).strip(), "%Y-%m-%d").date()
-                days_used = (today - start_date).days
-            except Exception:
-                days_used = 0
-
-            if days_used >= TRIAL_DAYS:
-                _update_tenant_status(chat_id, "trial_expired")
-                tenant["status"] = "trial_expired"
-                return {"valid": False, "status": "trial_expired", "days_left": 0, "tenant": tenant}
-
-            days_left = TRIAL_DAYS - days_used
-            return {"valid": True, "status": "trial", "days_left": days_left, "tenant": tenant}
-
-        elif status == "active":
-            end_date_str = tenant.get("subscription_end_date", "")
-            if end_date_str:
-                try:
-                    end_date = datetime.strptime(str(end_date_str).strip(), "%Y-%m-%d").date()
-                    if today > end_date:
-                        _update_tenant_status(chat_id, "subscription_expired")
-                        tenant["status"] = "subscription_expired"
-                        return {"valid": False, "status": "subscription_expired", "days_left": 0, "tenant": tenant}
-                    days_left = (end_date - today).days
-                    return {"valid": True, "status": "active", "days_left": days_left, "tenant": tenant}
-                except Exception:
-                    pass
-            # active بدون subscription_end_date محدد — يعتبر سليم (حالة استثنائية)
-            return {"valid": True, "status": "active", "days_left": None, "tenant": tenant}
-
-        elif status == "pending_payment":
-            return {"valid": False, "status": "pending_payment", "days_left": None, "tenant": tenant}
-
-        elif status in ("trial_expired", "subscription_expired"):
-            return {"valid": False, "status": status, "days_left": 0, "tenant": tenant}
-
-        return {"valid": False, "status": status or "unknown", "days_left": None, "tenant": tenant}
-
-    except Exception as e:
-        print(f"❌ MT008: {e}")
-        return {"valid": True, "status": "error_failsafe", "days_left": None, "tenant": None}
-
-
-def _update_tenant_status(chat_id, new_status):
-    """يحدّث عمود status (العمود I) في شيت Tenants لمكتب معيّن."""
-    try:
-        records = P005("Tenants", TENANTS_SHEET)
-        for i, r in enumerate(records, start=2):
-            if str(r.get("chat_id", "")) == str(chat_id):
-                P004("Tenants", i, 9, new_status, TENANTS_SHEET)
-                print(f"✅ _update_tenant_status: {chat_id} → {new_status}")
-                break
-    except Exception as e:
-        print(f"❌ _update_tenant_status: {e}")
-
-
-def _mark_reminder_sent(chat_id):
-    """يسجّل في عمود reminder_sent (العمود O) إن التنبيه اتبعت، عشان ميتكررش."""
-    try:
-        records = P005("Tenants", TENANTS_SHEET)
-        for i, r in enumerate(records, start=2):
-            if str(r.get("chat_id", "")) == str(chat_id):
-                P004("Tenants", i, 15, "yes", TENANTS_SHEET)
-                break
-    except Exception as e:
-        print(f"❌ _mark_reminder_sent: {e}")

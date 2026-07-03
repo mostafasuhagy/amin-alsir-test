@@ -48,9 +48,15 @@ async def RE002(update, context):
     context.user_data["step"] = "event_code"
 
 async def RE003(update, context):
-    events = C003()
+    # لازم نحدد شيت المكتب الصح قبل عرض الأحداث، وإلا هيعرض
+    # أحداث الشيت العام الافتراضي بدل أحداث المكتب الفعلي.
+    chat_id = update.effective_chat.id
+    tenant = context.user_data.get("tenant") or MT001(chat_id) or {}
+    sheet_name = tenant.get("sheet_name", SHEET_NAME)
+
+    events = C003(sheet_name)
     if not events:
-        await T001(context, update.effective_chat.id, "📅 لا توجد أحداث قادمة.")
+        await T001(context, chat_id, "📅 لا توجد أحداث قادمة.")
         return
     text = "📅 *الأحداث القادمة:*\n\n"
     for e in events:
@@ -59,7 +65,7 @@ async def RE003(update, context):
         location   = e.get("location_court", "")
         client     = e.get("client_name", "")
         text += f"• {event_type} — {event_date} — {client} — {location}\n"
-    await T001(context, update.effective_chat.id, text)
+    await T001(context, chat_id, text)
 
 async def RD001(update, context):
     await T001(context, update.effective_chat.id, "📁 *رفع مستند وارد*\n\nأدخل كود الموضوع المرتبط:")

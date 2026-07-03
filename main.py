@@ -269,7 +269,7 @@ async def _save_new_topic(context, chat_id, data, assistant_code="", assistant_n
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
         )
-        await N001(context, get_boss_id(context), f"📁 موضوع جديد: {data['title']}\n🔹 الكود: {code}\n👤 العميل: {data['client_name']}{assistant_line}")
+        await N001(context, get_boss_id(context), f"📁 موضوع جديد: {data['title']}\n🔹 الكود: {code}\n👤 العميل: {data['client_name']}{assistant_line}", sheet_name)
     else:
         await context.bot.send_message(chat_id=chat_id, text="❌ حدث خطأ في الحفظ.")
 
@@ -669,7 +669,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         [InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")],
                     ])
                 )
-                await N001(context, get_boss_id(context), f"👤 عميل جديد: {data['name']}\n🔹 الكود: {code}")
+                await N001(context, get_boss_id(context), f"👤 عميل جديد: {data['name']}\n🔹 الكود: {code}", sheet_name)
             else:
                 await T001(context, chat_id, "❌ حدث خطأ في الحفظ.")
 
@@ -725,7 +725,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تعديل الاسم!*\n\n👤 {text}", back_btn)
-            await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n👤 الاسم الجديد: {text}")
+            await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n👤 الاسم الجديد: {text}", sheet_name)
         elif step == "edit_mobile":
             if not V003(text):
                 await T001(context, chat_id, "❌ رقم الموبايل غير صحيح:")
@@ -739,7 +739,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تعديل الموبايل!*\n\n📱 {text}", back_btn)
-            await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n📱 الموبايل الجديد: {text}")
+            await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n📱 الموبايل الجديد: {text}", sheet_name)
         elif step == "edit_address":
             if not V001(text):
                 await T001(context, chat_id, "❌ العنوان قصير:")
@@ -753,7 +753,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تعديل العنوان!*\n\n🏠 {text}", back_btn)
-            await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n🏠 العنوان الجديد: {text}")
+            await N001(context, get_boss_id(context), f"✏️ تعديل عميل {client_code}\n🏠 العنوان الجديد: {text}", sheet_name)
 
     elif routine == "RA001":
         if step == "name":
@@ -790,7 +790,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         [InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")],
                     ])
                 )
-                await N001(context, get_boss_id(context), f"👥 مساعد جديد: {data['name']}\n🔹 الكود: {code}")
+                await N001(context, get_boss_id(context), f"👥 مساعد جديد: {data['name']}\n🔹 الكود: {code}", sheet_name)
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -945,7 +945,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم إضافة الحدث!*\n\n🔹 الكود: `{code}`\n📅 {data['event_date']} — {data['event_type']}\n📍 {data['location']}", back_btn)
-                await N001(context, get_boss_id(context), f"📅 حدث جديد: {data['event_type']}\n📅 {data['event_date']} — {data['location']}\n👤 {data['client_name']}")
+                await N001(context, get_boss_id(context), f"📅 حدث جديد: {data['event_type']}\n📅 {data['event_date']} — {data['location']}\n👤 {data['client_name']}", sheet_name)
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -1106,7 +1106,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
-            await N001(context, get_boss_id(context), f"✅ موافقة على مستند\n🔹 الكود: {text}\n📄 {doc.get('doc_name','—')}")
+            await N001(context, get_boss_id(context), f"✅ موافقة على مستند\n🔹 الكود: {text}\n📄 {doc.get('doc_name','—')}", sheet_name)
 
     elif routine == "RD004":
         if step == "doc_code":
@@ -1133,7 +1133,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n🔹 الكود: `{data['doc_code']}`\n📝 السبب: {text}", back_btn)
-            await N001(context, get_boss_id(context), f"❌ رفض مستند\n🔹 الكود: {data['doc_code']}\n📝 السبب: {text}")
+            await N001(context, get_boss_id(context), f"❌ رفض مستند\n🔹 الكود: {data['doc_code']}\n📝 السبب: {text}", sheet_name)
 
     elif routine == "RD005":
         if step == "topic_code":
@@ -1203,7 +1203,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم طلب العهدة!*\n\n🔹 الكود: `{code}`\n💰 {data['amount']} جنيه\n📝 {data['reason']}", back_btn)
-                await N001(context, get_boss_id(context), f"💰 طلب عهدة جديد\n🔹 الكود: {code}\n💰 المبلغ: {data['amount']} جنيه\n📝 {data['reason']}")
+                await N001(context, get_boss_id(context), f"💰 طلب عهدة جديد\n🔹 الكود: {code}\n💰 المبلغ: {data['amount']} جنيه\n📝 {data['reason']}", sheet_name)
             else:
                 await T001(context, chat_id, "❌ حدث خطأ.")
 
@@ -1237,7 +1237,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ النص قصير:")
                 return
-            await N001(context, get_boss_id(context), text)
+            sheet_name = get_tenant_sheet(context, chat_id)
+            await N001(context, get_boss_id(context), text, sheet_name)
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للرئيس!*", back_btn)
 
@@ -1263,7 +1264,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ النص قصير:")
                 return
-            await N002(context, data["client_chat_id"], text)
+            sheet_name = get_tenant_sheet(context, chat_id)
+            await N002(context, data["client_chat_id"], text, sheet_name)
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للعميل!*", back_btn)
 
@@ -1289,7 +1291,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if not V001(text):
                 await T001(context, chat_id, "❌ النص قصير:")
                 return
-            await N003(context, data["assistant_chat_id"], text)
+            sheet_name = get_tenant_sheet(context, chat_id)
+            await N003(context, data["assistant_chat_id"], text, sheet_name)
             context.user_data.clear()
             await T002(context, chat_id, "✅ *تم إرسال الإشعار للمساعد!*", back_btn)
 
@@ -1426,7 +1429,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
         )
-        await N001(context, get_boss_id(context), f"🗄️ تم أرشفة مستندات الموضوع: {topic_code}")
+        await N001(context, get_boss_id(context), f"🗄️ تم أرشفة مستندات الموضوع: {topic_code}", sheet_name)
         return
 
     if data == "ARCHIVE-CONFIRM":
@@ -1445,7 +1448,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
         )
-        await N001(context, get_boss_id(context), f"🗄️ تم أرشفة الموضوع\n🔹 الكود: {topic_code}\n📋 {topic_name}")
+        await N001(context, get_boss_id(context), f"🗄️ تم أرشفة الموضوع\n🔹 الكود: {topic_code}\n📋 {topic_name}", sheet_name)
         return
 
     if data.startswith("STATUS-"):
@@ -1577,7 +1580,8 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await N001(context, get_boss_id(context),
                 f"📁 مستند وارد جديد\n🔹 الكود: {code}\n"
                 f"📄 {data.get('doc_name', file_name)}\n"
-                f"📋 الموضوع: {topic_code}\n🔗 {drive_link}"
+                f"📋 الموضوع: {topic_code}\n🔗 {drive_link}",
+                sheet_name
             )
 
         except Exception as e:
