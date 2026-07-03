@@ -1066,7 +1066,24 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["description"] = text
             sheet_name = get_tenant_sheet(context, chat_id)
             code = G001("Doc", "Documents", sheet_name)
-            ok = P003("Documents", [code, data["entity"], data["description"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
+            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Documents الفعلية:
+            # doc_code | topic_code | doc_type | doc_name | file_extension |
+            # drive_link | uploaded_by | upload_date | status | approval_date | notes
+            # ملحوظة: طلب المستندات ده لسه معندوش ملف فعلي (بيسبق الرفع)،
+            # فبنستخدم doc_name لتسجيل اسم الجهة، وnotes لوصف الطلب.
+            ok = P003("Documents", [
+                code,                     # A doc_code
+                "",                       # B topic_code (غير مرتبط بموضوع محدد)
+                "طلب مستندات",             # C doc_type
+                data["entity"],           # D doc_name (اسم الجهة)
+                "",                       # E file_extension
+                "",                       # F drive_link (لسه مفيش ملف)
+                "",                       # G uploaded_by
+                datetime.now().strftime("%Y-%m-%d %H:%M"),  # H upload_date
+                "مطلوب",                  # I status
+                "",                       # J approval_date
+                data["description"],      # K notes (وصف المطلوب)
+            ], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم تسجيل الطلب!*\n\n🔹 الكود: `{code}`\n📄 من: {data['entity']}", back_btn)
@@ -1084,7 +1101,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Documents", i, 6, "موافق عليه", sheet_name)
+                    P004("Documents", i, 9, "موافق عليه", sheet_name)   # عمود I = status
+                    P004("Documents", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)  # عمود J = approval_date
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
@@ -1110,8 +1128,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["doc_code"]):
-                    P004("Documents", i, 6, "مرفوض", sheet_name)
-                    P004("Documents", i, 7, text, sheet_name)
+                    P004("Documents", i, 9, "مرفوض", sheet_name)   # عمود I = status
+                    P004("Documents", i, 11, text, sheet_name)     # عمود K = notes (سبب الرفض)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n🔹 الكود: `{data['doc_code']}`\n📝 السبب: {text}", back_btn)
@@ -1170,7 +1188,18 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["reason"] = text
             sheet_name = get_tenant_sheet(context, chat_id)
             code = G001("Fn", "Custody", sheet_name)
-            ok = P003("Custody", [code, data["amount"], data["reason"], "طلب", datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
+            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Custody الفعلية:
+            # custody_code | responsible_code | amount | payment_due |
+            # payment_status | actual_payment | notes
+            ok = P003("Custody", [
+                code,           # A custody_code
+                "",             # B responsible_code (غير مستخدم حاليًا)
+                data["amount"], # C amount
+                "",             # D payment_due (غير مستخدم حاليًا)
+                "طلب",          # E payment_status
+                "",             # F actual_payment
+                data["reason"], # G notes
+            ], sheet_name)
             context.user_data.clear()
             if ok:
                 await T002(context, chat_id, f"✅ *تم طلب العهدة!*\n\n🔹 الكود: `{code}`\n💰 {data['amount']} جنيه\n📝 {data['reason']}", back_btn)
@@ -1196,9 +1225,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Custody", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["fund_code"]):
-                    P004("Custody", i, 4, "مسوّاة", sheet_name)
-                    P004("Custody", i, 6, text, sheet_name)
-                    P004("Custody", i, 7, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)
+                    P004("Custody", i, 5, "مسوّاة", sheet_name)  # عمود E = payment_status
+                    P004("Custody", i, 6, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)  # عمود F = actual_payment
+                    P004("Custody", i, 7, text, sheet_name)  # عمود G = notes
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسوية العهدة!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 {data['amount']} جنيه", back_btn)
@@ -1390,7 +1419,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(r.get("topic_code", "")) == str(topic_code):
-                    P004("Documents", i, 6, "مؤرشف", sheet_name)
+                    P004("Documents", i, 9, "مؤرشف", sheet_name)  # عمود I = status
         context.user_data.clear()
         await query.edit_message_text(
             f"✅ تم أرشفة مستندات الموضوع `{topic_code}`",
@@ -1519,10 +1548,21 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             code = G001("Doc", "Documents", sheet_name)
+            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Documents الفعلية:
+            # doc_code | topic_code | doc_type | doc_name | file_extension |
+            # drive_link | uploaded_by | upload_date | status | approval_date | notes
             P003("Documents", [
-                code, topic_code, data.get("doc_name", file_name),
-                file_name, drive_link, "وارد", "TRANSIT",
-                datetime.now().strftime("%Y-%m-%d %H:%M")
+                code,                                          # A doc_code
+                topic_code,                                    # B topic_code
+                "",                                             # C doc_type
+                data.get("doc_name", file_name),                # D doc_name
+                suffix,                                         # E file_extension
+                drive_link,                                     # F drive_link
+                "",                                             # G uploaded_by
+                datetime.now().strftime("%Y-%m-%d %H:%M"),      # H upload_date
+                "وارد",                                          # I status
+                "",                                             # J approval_date
+                "",                                             # K notes
             ], sheet_name)
 
             context.user_data.clear()
