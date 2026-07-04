@@ -400,7 +400,7 @@ async def check_subscription_or_block(update, context, chat_id) -> bool:
                     [InlineKeyboardButton(f"🌟 سنوي — {SUBSCRIPTION_YEARLY:.0f} جنيه", callback_data=f"PAY-yearly-{tenant_code}")],
                 ])
                 await context.bot.send_message(chat_id=chat_id, text=warn_text + "\n\nاختر الباقة المناسبة لك:", parse_mode="Markdown", reply_markup=kb)
-            _mark_reminder_sent(chat_id)
+            mark_reminder_sent(chat_id)
         return True
 
     status = result["status"]

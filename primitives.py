@@ -284,7 +284,7 @@ def MT008(chat_id):
                 days_used = 0
 
             if days_used >= TRIAL_DAYS:
-                _update_tenant_status(chat_id, "trial_expired")
+                update_tenant_status(chat_id, "trial_expired")
                 tenant["status"] = "trial_expired"
                 return {"valid": False, "status": "trial_expired", "days_left": 0, "tenant": tenant}
 
@@ -297,7 +297,7 @@ def MT008(chat_id):
                 try:
                     end_date = datetime.strptime(str(end_date_str).strip(), "%Y-%m-%d").date()
                     if today > end_date:
-                        _update_tenant_status(chat_id, "subscription_expired")
+                        update_tenant_status(chat_id, "subscription_expired")
                         tenant["status"] = "subscription_expired"
                         return {"valid": False, "status": "subscription_expired", "days_left": 0, "tenant": tenant}
                     days_left = (end_date - today).days
@@ -320,20 +320,20 @@ def MT008(chat_id):
         return {"valid": True, "status": "error_failsafe", "days_left": None, "tenant": None}
 
 
-def _update_tenant_status(chat_id, new_status):
+def update_tenant_status(chat_id, new_status):
     """يحدّث عمود status (العمود I) في شيت Tenants لمكتب معيّن."""
     try:
         records = P005("Tenants", TENANTS_SHEET)
         for i, r in enumerate(records, start=2):
             if str(r.get("chat_id", "")) == str(chat_id):
                 P004("Tenants", i, 9, new_status, TENANTS_SHEET)
-                print(f"✅ _update_tenant_status: {chat_id} → {new_status}")
+                print(f"✅ update_tenant_status: {chat_id} → {new_status}")
                 break
     except Exception as e:
-        print(f"❌ _update_tenant_status: {e}")
+        print(f"❌ update_tenant_status: {e}")
 
 
-def _mark_reminder_sent(chat_id):
+def mark_reminder_sent(chat_id):
     """يسجّل في عمود reminder_sent (العمود O) إن التنبيه اتبعت، عشان مايتكررش."""
     try:
         records = P005("Tenants", TENANTS_SHEET)
@@ -343,14 +343,14 @@ def _mark_reminder_sent(chat_id):
                 matched = True
                 ok = P004("Tenants", i, 15, "yes", TENANTS_SHEET)
                 if ok:
-                    print(f"✅ _mark_reminder_sent: تم التسجيل بنجاح لـ chat_id={chat_id} (صف {i})")
+                    print(f"✅ mark_reminder_sent: تم التسجيل بنجاح لـ chat_id={chat_id} (صف {i})")
                 else:
-                    print(f"❌ _mark_reminder_sent: فشلت الكتابة الفعلية (P004 رجعت False) لـ chat_id={chat_id} (صف {i})")
+                    print(f"❌ mark_reminder_sent: فشلت الكتابة الفعلية (P004 رجعت False) لـ chat_id={chat_id} (صف {i})")
                 break
         if not matched:
-            print(f"❌ _mark_reminder_sent: لم يتم إيجاد أي صف بـ chat_id={chat_id} من أصل {len(records)} صف")
+            print(f"❌ mark_reminder_sent: لم يتم إيجاد أي صف بـ chat_id={chat_id} من أصل {len(records)} صف")
     except Exception as e:
-        print(f"❌ _mark_reminder_sent: استثناء غير متوقع — {e}")
+        print(f"❌ mark_reminder_sent: استثناء غير متوقع — {e}")
 
 # ─────────────────────────────────────────────
 # P001 — الاتصال بـ Google Sheets
