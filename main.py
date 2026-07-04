@@ -292,7 +292,7 @@ async def _save_new_topic(context, chat_id, data, assistant_code="", assistant_n
         data["title"],            # E service_name (عنوان الموضوع)
         assistant_code,           # F assistant_code
         assistant_name,           # G assistant_name
-        datetime.now().strftime("%Y-%m-%d %H:%M"),  # H date_opened
+        NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),  # H date_opened
         "جديد",                   # I status
         data["event_type"],       # J notes (نوع الموضوع)
     ], sheet_name)
@@ -690,7 +690,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sheet_name = get_tenant_sheet(context, chat_id)
             tenant_code = context.user_data.get("tenant", {}).get("tenant_code", "")
             code = G001("Cl", "Clients", sheet_name)
-            ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
+            ok = P003("Clients", [code, data["name"], data["national_id"], data["mobile"], data["address"], NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر"))], sheet_name)
             context.user_data.clear()
             if ok:
                 client_link = f"https://t.me/amin_alsir_bot?start=client_{tenant_code}_{code}"
@@ -811,7 +811,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             sheet_name = get_tenant_sheet(context, chat_id)
             tenant_code = context.user_data.get("tenant", {}).get("tenant_code", "")
             code = G001("As", "Assistants", sheet_name)
-            ok = P003("Assistants", [code, data["name"], data["bar_number"], data["mobile"], datetime.now().strftime("%Y-%m-%d %H:%M")], sheet_name)
+            ok = P003("Assistants", [code, data["name"], data["bar_number"], data["mobile"], NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر"))], sheet_name)
             context.user_data.clear()
             if ok:
                 assistant_link = f"https://t.me/amin_alsir_bot?start=assistant_{tenant_code}_{code}"
@@ -1037,7 +1037,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 data["topic_code"],       # B topic_code
                 "",                       # C sender (غير مستخدم حاليًا)
                 "",                       # D receiver (غير مستخدم حاليًا)
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # E send_date
+                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),  # E send_date
                 data["description"],      # F file_name (وصف المرفقات)
                 "",                       # G file_type
                 "",                       # H pickup_location
@@ -1064,7 +1064,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
                     P004("Shipments", i, 9, "مستلم", sheet_name)
-                    P004("Shipments", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)
+                    P004("Shipments", i, 10, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل استلام الشحنة!*\n\n🔹 الكود: `{text}`\n📦 {shipment.get('sender','—')}", back_btn)
@@ -1115,7 +1115,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "",                       # E file_extension
                 "",                       # F drive_link (لسه مفيش ملف)
                 "",                       # G uploaded_by
-                datetime.now().strftime("%Y-%m-%d %H:%M"),  # H upload_date
+                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),  # H upload_date
                 "مطلوب",                  # I status
                 "",                       # J approval_date
                 data["description"],      # K notes (وصف المطلوب)
@@ -1138,7 +1138,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
                     P004("Documents", i, 9, "موافق عليه", sheet_name)   # عمود I = status
-                    P004("Documents", i, 10, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)  # عمود J = approval_date
+                    P004("Documents", i, 10, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)  # عمود J = approval_date
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
@@ -1270,7 +1270,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["fund_code"]):
                     P004("Custody", i, 5, "مسوّاة", sheet_name)  # عمود E = payment_status
-                    P004("Custody", i, 6, datetime.now().strftime("%Y-%m-%d %H:%M"), sheet_name)  # عمود F = actual_payment
+                    P004("Custody", i, 6, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)  # عمود F = actual_payment
                     P004("Custody", i, 7, text, sheet_name)  # عمود G = notes
                     break
             context.user_data.clear()
@@ -1627,7 +1627,7 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 suffix,                                         # E file_extension
                 drive_link,                                     # F drive_link
                 "",                                             # G uploaded_by
-                datetime.now().strftime("%Y-%m-%d %H:%M"),      # H upload_date
+                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),      # H upload_date
                 "وارد",                                          # I status
                 "",                                             # J approval_date
                 "",                                             # K notes
