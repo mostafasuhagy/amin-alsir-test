@@ -337,12 +337,20 @@ def _mark_reminder_sent(chat_id):
     """يسجّل في عمود reminder_sent (العمود O) إن التنبيه اتبعت، عشان مايتكررش."""
     try:
         records = P005("Tenants", TENANTS_SHEET)
+        matched = False
         for i, r in enumerate(records, start=2):
-            if str(r.get("chat_id", "")) == str(chat_id):
-                P004("Tenants", i, 15, "yes", TENANTS_SHEET)
+            if str(r.get("chat_id", "")).strip() == str(chat_id).strip():
+                matched = True
+                ok = P004("Tenants", i, 15, "yes", TENANTS_SHEET)
+                if ok:
+                    print(f"✅ _mark_reminder_sent: تم التسجيل بنجاح لـ chat_id={chat_id} (صف {i})")
+                else:
+                    print(f"❌ _mark_reminder_sent: فشلت الكتابة الفعلية (P004 رجعت False) لـ chat_id={chat_id} (صف {i})")
                 break
+        if not matched:
+            print(f"❌ _mark_reminder_sent: لم يتم إيجاد أي صف بـ chat_id={chat_id} من أصل {len(records)} صف")
     except Exception as e:
-        print(f"❌ _mark_reminder_sent: {e}")
+        print(f"❌ _mark_reminder_sent: استثناء غير متوقع — {e}")
 
 # ─────────────────────────────────────────────
 # P001 — الاتصال بـ Google Sheets
