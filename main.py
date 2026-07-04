@@ -238,6 +238,42 @@ def get_tenant_sheet(context, chat_id):
 
     return SHEET_NAME
 
+async def _save_new_custody(context, chat_id, data, responsible_code="", payment_due=""):
+    """
+    حفظ طلب عهدة جديد — بتتنادى إما بعد إدخال المسؤول/التاريخ فعليًا
+    أو بعد الضغط على زر (تخطي) لأي منهم.
+    """
+    sheet_name = get_tenant_sheet(context, chat_id)
+    code = G001("Fn", "Custody", sheet_name)
+    # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Custody الفعلية:
+    # custody_code | responsible_code | amount | payment_due |
+    # payment_status | actual_payment | notes
+    ok = P003("Custody", [
+        code,                # A custody_code
+        responsible_code,    # B responsible_code
+        data["amount"],      # C amount
+        payment_due,         # D payment_due
+        "طلب",               # E payment_status
+        "",                  # F actual_payment
+        data["reason"],      # G notes
+    ], sheet_name)
+    context.user_data.clear()
+    if ok:
+        extra = ""
+        if responsible_code:
+            extra += f"\n👤 المسؤول: {responsible_code}"
+        if payment_due:
+            extra += f"\n📅 الاستحقاق: {payment_due}"
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=f"✅ *تم طلب العهدة!*\n\n🔹 الكود: `{code}`\n💰 {data['amount']} جنيه\n📝 {data['reason']}{extra}",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 القائمة", callback_data="MENU-MAIN")]])
+        )
+        await N001(context, get_boss_id(context), f"💰 طلب عهدة جديد\n🔹 الكود: {code}\n💰 المبلغ: {data['amount']} جنيه\n📝 {data['reason']}{extra}", sheet_name)
+    else:
+        await context.bot.send_message(chat_id=chat_id, text="❌ حدث خطأ في الحفظ.")
+
 async def _save_new_topic(context, chat_id, data, assistant_code="", assistant_name=""):
     """
     حفظ موضوع جديد في شيت Topics — بتتنادى إما بعد إدخال كود مساعد صحيح
@@ -1186,26 +1222,34 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await T001(context, chat_id, "❌ السبب قصير:")
                 return
             data["reason"] = text
+            context.user_data["step"] = "responsible_code"
+            await T002(context, chat_id,
+                "👤 أدخل *كود المسؤول* عن العهدة (أو اضغط تخطي):",
+                [
+                    [{"text": "⏭️ تخطي", "callback_data": "SKIP-CUSTODY-RESPONSIBLE"}],
+                    [{"text": "❌ إلغاء", "callback_data": "MENU-MAIN"}],
+                ]
+            )
+        elif step == "responsible_code":
             sheet_name = get_tenant_sheet(context, chat_id)
-            code = G001("Fn", "Custody", sheet_name)
-            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Custody الفعلية:
-            # custody_code | responsible_code | amount | payment_due |
-            # payment_status | actual_payment | notes
-            ok = P003("Custody", [
-                code,           # A custody_code
-                "",             # B responsible_code (غير مستخدم حاليًا)
-                data["amount"], # C amount
-                "",             # D payment_due (غير مستخدم حاليًا)
-                "طلب",          # E payment_status
-                "",             # F actual_payment
-                data["reason"], # G notes
-            ], sheet_name)
-            context.user_data.clear()
-            if ok:
-                await T002(context, chat_id, f"✅ *تم طلب العهدة!*\n\n🔹 الكود: `{code}`\n💰 {data['amount']} جنيه\n📝 {data['reason']}", back_btn)
-                await N001(context, get_boss_id(context), f"💰 طلب عهدة جديد\n🔹 الكود: {code}\n💰 المبلغ: {data['amount']} جنيه\n📝 {data['reason']}", sheet_name)
-            else:
-                await T001(context, chat_id, "❌ حدث خطأ.")
+            assistant = P002("Assistants", text, sheet_name)
+            if not assistant:
+                await T001(context, chat_id, "❌ الكود غير موجود. أدخل كود صحيح أو اضغط تخطي:")
+                return
+            data["responsible_code"] = text
+            context.user_data["step"] = "payment_due"
+            await T002(context, chat_id,
+                "📅 أدخل *تاريخ الاستحقاق المتوقع* (DD/MM/YYYY) أو اضغط تخطي:",
+                [
+                    [{"text": "⏭️ تخطي", "callback_data": "SKIP-CUSTODY-DUE"}],
+                    [{"text": "❌ إلغاء", "callback_data": "MENU-MAIN"}],
+                ]
+            )
+        elif step == "payment_due":
+            if not V004(text):
+                await T001(context, chat_id, "❌ التاريخ غير صحيح. استخدم DD/MM/YYYY أو اضغط تخطي:")
+                return
+            await _save_new_custody(context, chat_id, data, responsible_code=data.get("responsible_code", ""), payment_due=text)
 
     elif routine == "RM002":
         if step == "fund_code":
@@ -1404,6 +1448,27 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(
                 "❌ حدث خطأ في التسجيل. أرسل /start للمحاولة مرة أخرى."
             )
+        return
+
+    if data == "SKIP-CUSTODY-RESPONSIBLE":
+        context.user_data["step"] = "payment_due"
+        await query.edit_message_text(
+            "📅 أدخل *تاريخ الاستحقاق المتوقع* (DD/MM/YYYY) أو اضغط تخطي:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("⏭️ تخطي", callback_data="SKIP-CUSTODY-DUE")],
+                [InlineKeyboardButton("❌ إلغاء", callback_data="MENU-MAIN")],
+            ])
+        )
+        return
+
+    if data == "SKIP-CUSTODY-DUE":
+        custody_data = context.user_data.get("data", {})
+        if custody_data.get("amount") and custody_data.get("reason"):
+            await _save_new_custody(context, chat_id, custody_data, responsible_code=custody_data.get("responsible_code", ""))
+        else:
+            context.user_data.clear()
+            await query.edit_message_text("❌ حدث خطأ — ابدأ من جديد.")
         return
 
     if data == "SKIP-ASSISTANT":
