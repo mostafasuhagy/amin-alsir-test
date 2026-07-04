@@ -383,17 +383,23 @@ async def check_subscription_or_block(update, context, chat_id) -> bool:
         tenant = result.get("tenant") or {}
         days_left = result.get("days_left")
         if days_left is not None and days_left <= 2 and str(tenant.get("reminder_sent", "")).lower() != "yes":
-            billing_cycle = tenant.get("billing_cycle", "") or "monthly"
-            pay_link = create_payment_link(
-                tenant.get("tenant_code", ""), billing_cycle, tenant.get("office_name", "")
-            )
             period_label = "فترتك التجريبية" if result["status"] == "trial" else "اشتراكك"
             warn_text = f"⚠️ *تنبيه*\n\nباقي {days_left} يوم على انتهاء {period_label}."
-            if pay_link:
-                kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 اشترك دلوقتي", url=pay_link)]])
-                await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown", reply_markup=kb)
+            billing_cycle = tenant.get("billing_cycle", "")
+            tenant_code = tenant.get("tenant_code", "")
+            if billing_cycle:
+                pay_link = create_payment_link(tenant_code, billing_cycle, tenant.get("office_name", ""))
+                if pay_link:
+                    kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 اشترك دلوقتي", url=pay_link)]])
+                    await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown", reply_markup=kb)
+                else:
+                    await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown")
             else:
-                await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown")
+                kb = InlineKeyboardMarkup([
+                    [InlineKeyboardButton(f"📅 شهري — {SUBSCRIPTION_MONTHLY:.0f} جنيه", callback_data=f"PAY-monthly-{tenant_code}")],
+                    [InlineKeyboardButton(f"🌟 سنوي — {SUBSCRIPTION_YEARLY:.0f} جنيه", callback_data=f"PAY-yearly-{tenant_code}")],
+                ])
+                await context.bot.send_message(chat_id=chat_id, text=warn_text + "\n\nاختر الباقة المناسبة لك:", parse_mode="Markdown", reply_markup=kb)
             _mark_reminder_sent(chat_id)
         return True
 
@@ -401,21 +407,27 @@ async def check_subscription_or_block(update, context, chat_id) -> bool:
     tenant = result.get("tenant") or {}
 
     if status in ("trial_expired", "subscription_expired"):
-        billing_cycle = tenant.get("billing_cycle", "") or "monthly"
-        pay_link = create_payment_link(
-            tenant.get("tenant_code", ""), billing_cycle, tenant.get("office_name", "")
-        )
         label = "انتهت فترتك التجريبية" if status == "trial_expired" else "انتهى اشتراكك"
         text = f"⏰ *{label}*\n\nللاستمرار في استخدام أمين السر، يرجى الاشتراك."
-        if pay_link:
-            kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 اشترك الآن", url=pay_link)]])
-            await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown", reply_markup=kb)
+        billing_cycle = tenant.get("billing_cycle", "")
+        tenant_code = tenant.get("tenant_code", "")
+        if billing_cycle:
+            pay_link = create_payment_link(tenant_code, billing_cycle, tenant.get("office_name", ""))
+            if pay_link:
+                kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 اشترك الآن", url=pay_link)]])
+                await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown", reply_markup=kb)
+            else:
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text=text + "\n\n(تعذر توليد رابط الدفع، تواصل مع الدعم)",
+                    parse_mode="Markdown",
+                )
         else:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=text + "\n\n(تعذر توليد رابط الدفع، تواصل مع الدعم)",
-                parse_mode="Markdown",
-            )
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"📅 شهري — {SUBSCRIPTION_MONTHLY:.0f} جنيه", callback_data=f"PAY-monthly-{tenant_code}")],
+                [InlineKeyboardButton(f"🌟 سنوي — {SUBSCRIPTION_YEARLY:.0f} جنيه", callback_data=f"PAY-yearly-{tenant_code}")],
+            ])
+            await context.bot.send_message(chat_id=chat_id, text=text + "\n\nاختر الباقة المناسبة لك:", parse_mode="Markdown", reply_markup=kb)
     elif status == "pending_payment":
         await context.bot.send_message(
             chat_id=chat_id,
@@ -1525,6 +1537,28 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             context.user_data.clear()
             await query.edit_message_text("❌ حدث خطأ — ابدأ من جديد.")
+        return
+
+    if data.startswith("PAY-"):
+        parts = data.split("-", 2)
+        if len(parts) < 3:
+            await query.edit_message_text("❌ حدث خطأ. تواصل مع الدعم.")
+            return
+        billing_cycle, tenant_code = parts[1], parts[2]
+        tenant_row = P002("Tenants", tenant_code, TENANTS_SHEET)
+        if not tenant_row:
+            await query.edit_message_text("❌ تعذر إيجاد بيانات مكتبك. تواصل مع الدعم.")
+            return
+        pay_link = create_payment_link(tenant_code, billing_cycle, tenant_row.get("office_name", ""))
+        cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"
+        if pay_link:
+            await query.edit_message_text(
+                f"✅ اخترت الباقة *{cycle_label}*\n\nاضغط الرابط ده لإتمام الدفع:",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💳 الدفع الآن", url=pay_link)]])
+            )
+        else:
+            await query.edit_message_text("❌ تعذر توليد رابط الدفع. تواصل مع الدعم.")
         return
 
     if data == "SKIP-ASSISTANT":
