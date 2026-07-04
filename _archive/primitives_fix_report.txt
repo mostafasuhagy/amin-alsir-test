@@ -1,0 +1,155 @@
+Total lines: 888
+Fixed by encoding:
+  cp720: 74 lines
+Unresolved (need manual review): 75 lines
+
+---- Details ----
+Line 23: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 24: fixed via cp720
+Line 25: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 27: fixed via cp720
+Line 28: fixed via cp720
+Line 29: fixed via cp720
+Line 30: fixed via cp720
+Line 31: fixed via cp720
+Line 32: fixed via cp720
+Line 33: fixed via cp720
+Line 34: fixed via cp720
+Line 35: fixed via cp720
+Line 36: fixed via cp720
+Line 37: fixed via cp720
+Line 38: fixed via cp720
+Line 39: fixed via cp720
+Line 40: fixed via cp720
+Line 41: fixed via cp720
+Line 42: fixed via cp720
+Line 43: fixed via cp720
+Line 44: fixed via cp720
+Line 50: fixed via cp720
+Line 58: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 59: fixed via cp720
+Line 60: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 69: UNRESOLVED ->         print(f"ظإî MT001: {e}")
+Line 76: fixed via cp720
+Line 90: fixed via cp720
+Line 93: fixed via cp720
+Line 96: UNRESOLVED ->         print(f"ظإî MT002: {e}")
+Line 106: UNRESOLVED ->         print(f"ظإî MT003: {e}")
+Line 116: UNRESOLVED ->         print(f"ظإî MT004: {e}")
+Line 126: UNRESOLVED ->         print(f"ظإî MT005: {e}")
+Line 141: UNRESOLVED ->         # ظ¤ظ¤ ╪ح┘╪┤╪د╪ة ┘à┘┘ ╪د┘╪┤┘è╪ز ┘à╪ذ╪د╪┤╪▒╪ر ╪»╪د╪«┘ ╪د┘┘ Shared Drive ظ¤ظ¤
+Line 142: fixed via cp720
+Line 143: fixed via cp720
+Line 144: fixed via cp720
+Line 145: fixed via cp720
+Line 146: fixed via cp720
+Line 147: fixed via cp720
+Line 148: fixed via cp720
+Line 149: fixed via cp720
+Line 161: fixed via cp720
+Line 163: fixed via cp720
+Line 164: fixed via cp720
+Line 182: fixed via cp720
+Line 184: fixed via cp720
+Line 190: fixed via cp720
+Line 192: fixed via cp720
+Line 210: fixed via cp720
+Line 212: UNRESOLVED ->         # ظ¤ظ¤ ┘à╪┤╪د╪▒┘â╪ر ╪د┘╪┤┘è╪ز ┘à╪╣ ╪ص╪│╪د╪ذ Apps Script (┘┘┘â╪ز╪د╪ذ╪ر ┘à┘ ┘┘ê╪ص╪د╪ز ╪د┘┘é┘è╪د╪»╪ر) ظ¤ظ¤
+Line 213: fixed via cp720
+Line 214: fixed via cp720
+Line 215: fixed via cp720
+Line 216: fixed via cp720
+Line 227: fixed via cp720
+Line 229: fixed via cp720
+Line 231: UNRESOLVED ->         # ظ¤ظ¤ ┘à╪┤╪د╪▒┘â╪ر ╪د┘╪┤┘è╪ز ┘┘┘é╪▒╪د╪ة╪ر ╪د┘╪╣╪د┘à╪ر (anyone with the link) ظ¤ظ¤
+Line 232: fixed via cp720
+Line 233: fixed via cp720
+Line 234: fixed via cp720
+Line 235: fixed via cp720
+Line 245: fixed via cp720
+Line 247: fixed via cp720
+Line 252: UNRESOLVED ->         print(f"ظإî MT006: {e}")
+Line 274: fixed via cp720
+Line 278: UNRESOLVED ->         print(f"ظإî MT007: {e}")
+Line 281: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 282: fixed via cp720
+Line 283: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 292: UNRESOLVED ->         print(f"ظإî P001: {e}")
+Line 295: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 296: fixed via cp720
+Line 297: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 307: UNRESOLVED ->         print(f"ظإî P001C: {e}")
+Line 310: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 311: fixed via cp720
+Line 312: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 322: UNRESOLVED ->         print(f"ظإî P001D: {e}")
+Line 325: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 327: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 336: UNRESOLVED ->         print(f"ظإî P002: {e}")
+Line 344: UNRESOLVED ->         print(f"ظإî P003: {e}")
+Line 352: UNRESOLVED ->         print(f"ظإî P004: {e}")
+Line 359: UNRESOLVED ->         print(f"ظإî P005: {e}")
+Line 366: UNRESOLVED ->         print(f"ظإî P006: {e}")
+Line 374: UNRESOLVED ->         print(f"ظإî G001: {e}")
+Line 377: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 379: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 391: UNRESOLVED ->         print(f"ظ£à LOG_NOTIFICATION: {code} ظ¤ {notif_type} ظ¤ {name}")
+Line 393: UNRESOLVED ->         print(f"ظإî LOG_NOTIFICATION: {e}")
+Line 395: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 397: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 420: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 422: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 434: fixed via cp720
+Line 461: fixed via cp720
+Line 464: UNRESOLVED ->         print(f"ظإî CAL001: {e}")
+Line 482: UNRESOLVED ->                 "id": e.get("id", ""), "title": e.get("summary", "ظ¤"),
+Line 488: UNRESOLVED ->         print(f"ظإî CAL002: {e}")
+Line 497: fixed via cp720
+Line 500: UNRESOLVED ->         print(f"ظإî CAL003: {e}")
+Line 511: fixed via cp720
+Line 514: UNRESOLVED ->         print(f"ظإî CAL004: {e}")
+Line 519: fixed via cp720
+Line 521: UNRESOLVED ->         print(f"ظإî CAL005: {e}")
+Line 524: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 526: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 565: fixed via cp720
+Line 569: UNRESOLVED ->         print(f"ظإî DRV001: {e}")
+Line 611: UNRESOLVED ->                 "name":         f.get("name", "ظ¤"),
+Line 616: fixed via cp720
+Line 620: UNRESOLVED ->         print(f"ظإî DRV002: {e}")
+Line 630: fixed via cp720
+Line 633: UNRESOLVED ->         print(f"ظإî DRV003: {e}")
+Line 658: fixed via cp720
+Line 672: fixed via cp720
+Line 676: UNRESOLVED ->         print(f"ظإî DRV004: {e}")
+Line 714: fixed via cp720
+Line 718: UNRESOLVED ->         print(f"ظإî DRV005: {e}")
+Line 721: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 723: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 728: UNRESOLVED ->         print(f"ظإî T001: {e}")
+Line 737: UNRESOLVED ->         print(f"ظإî T002: {e}")
+Line 750: UNRESOLVED ->         print(f"ظإî T003: {e}")
+Line 764: UNRESOLVED ->         print(f"ظإî T004: {e}")
+Line 771: UNRESOLVED ->         print(f"ظإî T005: {e}")
+Line 774: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 776: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 781: fixed via cp720
+Line 784: fixed via cp720
+Line 787: UNRESOLVED ->         print(f"ظإî N001: {e}")
+Line 794: fixed via cp720
+Line 797: fixed via cp720
+Line 800: UNRESOLVED ->         print(f"ظإî N002: {e}")
+Line 807: fixed via cp720
+Line 810: fixed via cp720
+Line 813: UNRESOLVED ->         print(f"ظإî N003: {e}")
+Line 816: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 818: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 825: UNRESOLVED ->         print(f"ظإî C001: {e}")
+Line 839: UNRESOLVED ->         print(f"ظإî C002: {e}")
+Line 858: UNRESOLVED ->         print(f"ظإî C003: {e}")
+Line 861: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 863: UNRESOLVED -> # ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+Line 869: UNRESOLVED ->         print(f"ظإî L001: {e}")
+Line 874: fixed via cp720
+Line 877: UNRESOLVED ->         print(f"ظإî L002: {e}")
+Line 887: UNRESOLVED ->         print(f"ظإî L003: {e}")

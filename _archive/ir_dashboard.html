@@ -1,0 +1,39 @@
+warning: in the working copy of 'main.py', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/main.py b/main.py[m
+[1mindex 1938bf7..5e1016d 100644[m
+[1m--- a/main.py[m
+[1m+++ b/main.py[m
+[36m@@ -23,6 +23,13 @@[m [mfrom flask import Flask, request, jsonify[m
+ TOKEN = os.environ.get("BOT_TOKEN", "")[m
+ BOSS_CHAT_ID = int(os.environ.get("BOSS_CHAT_ID", "8653723225"))  # v2.1[m
+ [m
+[32m+[m[32m# أي حالة غير فاضية (trial / pending_payment / active) تعني إن المكتب[m
+[32m+[m[32m# مسجّل فعلاً ولا يحتاج تسجيلاً جديدًا في start(). قبل هذا التصحيح كان[m
+[32m+[m[32m# الشرط = "active" فقط، فكل مكتب لسه في فترة التجربة المجانية (trial)[m
+[32m+[m[32m# أو منتظر الدفع (pending_payment) كان يُعامل كمكتب جديد ويُطلب منه[m
+[32m+[m[32m# التسجيل من الصفر في كل /start، رغم وجوده فعلاً.[m
+[32m+[m[32mEXISTING_TENANT_STATUSES = {"trial", "pending_payment", "active"}[m
+[32m+[m
+ # ═══════════════════════════════════════[m
+ # Paymob — متغيرات الإعداد (من Railway Variables)[m
+ # ═══════════════════════════════════════[m
+[36m@@ -479,7 +486,7 @@[m [masync def start(update: Update, context: ContextTypes.DEFAULT_TYPE):[m
+             cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"[m
+ [m
+             tenant = MT001(chat_id)[m
+[31m-            if tenant and tenant.get("status") == "active":[m
+[32m+[m[32m            if tenant and tenant.get("status") in EXISTING_TENANT_STATUSES:[m
+                 office_name = tenant.get("office_name", "المكتب")[m
+                 country = tenant.get("country", "مصر")[m
+                 context.user_data["tenant"] = tenant[m
+[36m@@ -509,8 +516,8 @@[m [masync def start(update: Update, context: ContextTypes.DEFAULT_TYPE):[m
+     # ── التحقق من الاشتراك (الحالة العادية، بدون Deep Link) ──[m
+     tenant = MT001(chat_id)[m
+ [m
+[31m-    if tenant and tenant.get("status") == "active":[m
+[31m-        # مكتب مشترك — فتح الداشبورد[m
+[32m+[m[32m    if tenant and tenant.get("status") in EXISTING_TENANT_STATUSES:[m
+[32m+[m[32m        # مكتب موجود فعلاً — فتح الداشبورد[m
+         office_name = tenant.get("office_name", "المكتب")[m
+         country = tenant.get("country", "مصر")[m
+         context.user_data["tenant"] = tenant[m

@@ -1,0 +1,26 @@
+Total lines in file: 888
+Lines that look broken (box-drawing artifacts): 77
+Tested against first 30 broken lines
+
+---- Candidate encodings ranked by success ----
+
+[cp720] fixed 29/30 test lines
+  Sample output: # المناطق الزمنية للدول العربية
+
+[oem] fixed 29/30 test lines
+  Sample output: # المناطق الزمنية للدول العربية
+
+[cp437] fixed 3/30 test lines
+  Sample output: "مصر":       "Africa/Cairo",
+
+[cp860] fixed 3/30 test lines
+  Sample output: "مصر":       "Africa/Cairo",
+
+[cp861] fixed 3/30 test lines
+  Sample output: "مصر":       "Africa/Cairo",
+
+[cp863] fixed 3/30 test lines
+  Sample output: "مصر":       "Africa/Cairo",
+
+[cp865] fixed 3/30 test lines
+  Sample output: "مصر":       "Africa/Cairo",

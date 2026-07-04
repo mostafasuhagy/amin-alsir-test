@@ -1,0 +1,55 @@
+[33me6f6b75[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: isolate Notifications and Events data per tenant (was leaking to shared default sheet)
+[33m3d9b980[m Fix: G001 code generator now derives next code from max existing number, not row count, to prevent code collisions after row deletions
+[33m043ee5b[m Add MT008 subscription check decorator wired to ROUTE_MAP dispatch
+[33m5958924[m Fix: encoding corruption (UTF-8 mis-decoded as cp720) in primitives.py — 74 lines restored, ARAB_TIMEZONES dict and N001/N002/N003 notification text now correct
+[33mb5718b4[m Fix MT007 - tenant folder now created in Shared Drive instead of My Drive
+[33m5876b40[m Fix MT007 - tenant folder now created in Shared Drive instead of My Drive
+[33m46a3a84[m Fix MT007 - tenant folder now created in Shared Drive
+[33m0276852[m fix: force code column as plain text with leading quote to prevent date auto-conversion
+[33m54fdd94[m fix: format client/topic/etc code columns as plain text to prevent auto date conversion
+[33m4766da9[m fix: MT002 accepts status/billing_cycle/sheet_id, add TRIAL_DAYS
+[33m6d2e089[m fix: ensure correct primitives.py with Shared Drive fix in MT006
+[33mf10831c[m fix: create tenant sheets directly in shared Drive to avoid Service Account storage quota 403
+[33me267684[m fix: remove invalid driveId from DRV001/DRV002, clean up MT006 debug code
+[33m2818dbf[m debug: add detailed error logging to MT006 for diagnosis
+[33m3642bd5[m fix: auto-share new tenant sheets with Apps Script account (writer) and public read access (viewer)
+[33m5905da0[m feat: add dynamic sheet_id support for HTML dashboards
+[33m5b9b031[m feat: trial/pending_payment subscription flow with auto payment link
+[33ma58fe43[m debug: add step markers to MT006 to pinpoint failing API call
+[33mc93d5db[m fix: MT006 drive-first pattern to fix 403 quota error
+[33m2a7c5a3[m Fix MT006: create spreadsheet directly inside Shared Drive via Drive API
+[33m180f24c[m Fix DRIVE_FOLDER_ID to point to Shared Drive root instead of Service Account My Drive
+[33mec1f5bf[m Fix DRV001/DRV005: remove invalid driveId param; restore full Multi-tenant primitives
+[33m2ca33db[m Fix DRV001: remove invalid driveId param from files.create
+[33m2df2ab0[m fix: add driveId param to files.create in DRV001
+[33m7d6845b[m fix: DRV001 add driveId for Shared Drive upload
+[33me7e5923[m Revert "fix: DRV001 add driveId to upload on Shared Drive"
+[33m77ef2ad[m fix: DRV001 add driveId to upload on Shared Drive
+[33mc72203a[m fix: DRV004 Shared Drive search
+[33m1052e97[m fix: DRV004 Shared Drive search - syntax verified
+[33m5654858[m fix: DRV004 search in Shared Drive with corpora and driveId
+[33m2fd4b8f[m Revert "fix: DRV004 search in Shared Drive"
+[33m222cedd[m fix: DRV004 search in Shared Drive
+[33mf9e9b35[m Revert "fix: DRV004 search inside Shared Drive with corpora and driveId"
+[33m737a7e0[m fix: DRV004 search inside Shared Drive with corpora and driveId
+[33mbdacf9b[m fix:remove includeItemsFroAllDrives FromAllDrlves from all drive functions
+[33mdc662ba[m fix: use primitives_15 - full file with correct DRV001
+[33mbccdb0f[m Revert "fix: clean primitives.py - correct DRV001 and DRV004"
+[33m58d3a67[m fix: clean primitives.py - correct DRV001 and DRV004
+[33me02ea3a[m fix: remove invalid includeItemsFromAllDrives from files.create
+[33m46f662e[m fix: DRV001 DRV004 remove driveId from body
+[33md134930[m fix: DRV001 &DRV004 - add driveId for shared for shared Drive upload
+[33m6f37267[m feat: auto-create sheet and drive folder for new tenant
+[33m48d9641[m fix: update DRIVE_FOLDER_ID to correct folder
+[33mbda93ab[m fix: case-insensitive search in p002 and p006
+[33m293d1ea[m fix: MT001 search by chat_id column
+[33m8e43020[m fix: TENANTS_SHEET correct sheet name
+[33mc04425a[m feat: add multi-tenant support and Arab timezones
+[33m4395482[m feat: auto-log all notifications to Notifications sheet
+[33md2c3603[m remove impersonation use direct service account
+[33mf5595a7[m update shared drive folder id
+[33m408319f[m fix Drive upload quota
+[33m2666afb[m fix: add file_router + Drive upload D001 S001
+[33mee79800[m add Google Calendar integration
+[33m060d125[m fix C003 event_date
+[33m48a2d52[m Add primitives.py
