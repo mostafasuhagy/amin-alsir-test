@@ -179,6 +179,62 @@ def send_telegram_message_sync(chat_id, text: str):
         print(f"❌ send_telegram_message_sync error: {e}")
 
 
+# ═══════════════════════════════════════
+# Endpoint آمن لإشعار المحامي من لوحة العميل
+# التوكن لا يظهر في المتصفح أبدًا — السيرفر هو
+# اللي بيبعت الرسالة الفعلية لتيليجرام
+# ═══════════════════════════════════════
+@flask_app.after_request
+def add_cors_headers(response):
+    # لازم نسمح صراحة بالطلبات القادمة من دومين لوحة العميل
+    # (aminalserr.com) لأنه مختلف عن دومين السيرفر نفسه (Railway).
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+@flask_app.route("/api/notify-boss", methods=["POST", "OPTIONS"])
+def api_notify_boss():
+    if request.method == "OPTIONS":
+        # طلب preflight من المتصفح — نرجع رد فاضي بالرؤوس بس
+        return ("", 204)
+    try:
+        payload = request.get_json(force=True)
+        sheet_id    = str(payload.get("sheet_id", "")).strip()
+        client_code = payload.get("client_code", "")
+        client_name = payload.get("client_name", "")
+        subject     = payload.get("subject", "")
+        message     = payload.get("message", "")
+
+        if not sheet_id or not subject or not message:
+            return jsonify({"ok": False, "error": "missing_fields"}), 400
+
+        tenant_row = None
+        for r in P005("Tenants", TENANTS_SHEET):
+            if str(r.get("sheet_id", "")).strip() == sheet_id:
+                tenant_row = r
+                break
+
+        if not tenant_row:
+            return jsonify({"ok": False, "error": "tenant_not_found"}), 404
+
+        boss_id = tenant_row.get("boss_chat_id", "") or BOSS_CHAT_ID
+
+        text = (
+            f"🔔 *إشعار من العميل*\n\n"
+            f"👤 العميل: {client_name}\n"
+            f"🔹 الكود: {client_code}\n\n"
+            f"📌 *الموضوع:* {subject}\n\n"
+            f"📝 *الرسالة:*\n{message}"
+        )
+        send_telegram_message_sync(boss_id, text)
+        return jsonify({"ok": True}), 200
+
+    except Exception as e:
+        print(f"❌ api_notify_boss error: {e}")
+        return jsonify({"ok": False, "error": "server_error"}), 500
+
+
 def run_flask():
     port = int(os.environ.get("PORT", 8080))
     flask_app.run(host="0.0.0.0", port=port)
