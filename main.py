@@ -105,7 +105,18 @@ def verify_hmac(data: dict, received_hmac: str) -> bool:
             return d.get(parent, {}).get(child, "")
         return d.get(key, "")
 
-    concatenated = "".join(str(get_nested(data, f)) for f in ordered_fields)
+    def to_paymob_string(value):
+        # Paymob expects JSON-style lowercase booleans ("true"/"false"),
+        # not Python's str(True) == "True". This mismatch was causing
+        # every real transaction (which always has some boolean fields
+        # set to True) to fail HMAC verification with a 400 response.
+        if isinstance(value, bool):
+            return "true" if value else "false"
+        if value is None:
+            return ""
+        return str(value)
+
+    concatenated = "".join(to_paymob_string(get_nested(data, f)) for f in ordered_fields)
 
     calculated_hmac = hmac.new(
         PAYMOB_HMAC.encode("utf-8"),
@@ -301,17 +312,14 @@ async def _save_new_custody(context, chat_id, data, responsible_code="", payment
     """
     sheet_name = get_tenant_sheet(context, chat_id)
     code = G001("Fn", "Custody", sheet_name)
-    # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Custody الفعلية:
-    # custody_code | responsible_code | amount | payment_due |
-    # payment_status | actual_payment | notes
     ok = P003("Custody", [
-        code,                # A custody_code
-        responsible_code,    # B responsible_code
-        data["amount"],      # C amount
-        payment_due,         # D payment_due
-        "طلب",               # E payment_status
-        "",                  # F actual_payment
-        data["reason"],      # G notes
+        code,
+        responsible_code,
+        data["amount"],
+        payment_due,
+        "طلب",
+        "",
+        data["reason"],
     ], sheet_name)
     context.user_data.clear()
     if ok:
@@ -332,25 +340,21 @@ async def _save_new_custody(context, chat_id, data, responsible_code="", payment
 
 async def _save_new_topic(context, chat_id, data, assistant_code="", assistant_name=""):
     """
-    حفظ موضوع جديد في شيت Topics — بتتنادى إما بعد إدخال كود مساعد صحيح
-    أو بعد الضغط على زر (تخطي) في حالة عدم تحديد مساعد.
+    حفظ موضوع جديد في شيت Topics
     """
     sheet_name = get_tenant_sheet(context, chat_id)
     code = G001("Tp", "Topics", sheet_name)
-    # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Topics الفعلية بالظبط:
-    # topic_code | client_code | client_name | service_code | service_name |
-    # assistant_code | assistant_name | date_opened | status | notes
     ok = P003("Topics", [
-        code,                     # A topic_code
-        data["client_code"],      # B client_code
-        data["client_name"],      # C client_name
-        "",                       # D service_code (غير مستخدم حاليًا)
-        data["title"],            # E service_name (عنوان الموضوع)
-        assistant_code,           # F assistant_code
-        assistant_name,           # G assistant_name
-        NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),  # H date_opened
-        "جديد",                   # I status
-        data["event_type"],       # J notes (نوع الموضوع)
+        code,
+        data["client_code"],
+        data["client_name"],
+        "",
+        data["title"],
+        assistant_code,
+        assistant_name,
+        NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),
+        "جديد",
+        data["event_type"],
     ], sheet_name)
     context.user_data.clear()
     if ok:
@@ -370,13 +374,7 @@ def build_boss_dashboard_url(chat_id, tenant):
     sheet_id = tenant.get("sheet_id", "")
     return f"https://aminalserr.com/amin_alsir_dashboard.html?t={token}&sid={sheet_id}"
 
-# ═══════════════════════════════════════
-# فحص الاشتراك قبل أي عملية حساسة
-# ═══════════════════════════════════════
 async def check_subscription_or_block(update, context, chat_id) -> bool:
-    """
-    True = مسموح بالاستمرار. False = اتبعتت رسالة منع، يوقف الكولر فورًا.
-    """
     result = MT008(chat_id)
 
     if result["valid"]:
@@ -560,10 +558,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
                 token = base64.b64encode(str(chat_id).encode()).decode()
-                # ── إضافة client_code (c) صراحة في الرابط ──
-                # هذا يمنع أي التباس لو نفس حساب التليجرام مرتبط
-                # بأكثر من عميل (كحالة اختبار)، ويجعل الداشبورد يتعرف
-                # على العميل الصحيح بشكل مؤكد بدل الاعتماد على chat_id فقط.
                 dashboard_url = f"https://aminalserr.com/amin_alsir_client_dashboard.html?t={token}&sid={sheet_id}&c={ref_code}"
                 await update.message.reply_text(
                     f"🔗 <b>رابط لوحة القيادة الخاصة بك:</b>\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n📌 احفظ هذا الرابط في مفضلاتك",
@@ -608,8 +602,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     parse_mode="Markdown"
                 )
                 token = base64.b64encode(str(chat_id).encode()).decode()
-                # ── إضافة assistant_code (c) صراحة في الرابط ──
-                # نفس منطق حماية لوحة العميل، لتفادي أي التباس بين المساعدين.
                 dashboard_url = f"https://aminalserr.com/amin_alsir_assistant_dashboard.html?t={token}&sid={sheet_id}&c={ref_code}"
                 await update.message.reply_text(
                     f"🔗 <b>رابط لوحة القيادة الخاصة بك:</b>\n<a href=\"{dashboard_url}\">{dashboard_url}</a>\n\n📌 احفظ هذا الرابط في مفضلاتك",
@@ -1097,21 +1089,18 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["description"] = text
             sheet_name = get_tenant_sheet(context, chat_id)
             code = G001("Sh", "Shipments", sheet_name)
-            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Shipments الفعلية بالظبط:
-            # shipment_code | topic_code | sender | receiver | send_date | file_name |
-            # file_type | pickup_location | receive_status | receive_date | notes
             ok = P003("Shipments", [
-                code,                     # A shipment_code
-                data["topic_code"],       # B topic_code
-                "",                       # C sender (غير مستخدم حاليًا)
-                "",                       # D receiver (غير مستخدم حاليًا)
-                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),  # E send_date
-                data["description"],      # F file_name (وصف المرفقات)
-                "",                       # G file_type
-                "",                       # H pickup_location
-                "معلق",                   # I receive_status
-                "",                       # J receive_date
-                "",                       # K notes
+                code,
+                data["topic_code"],
+                "",
+                "",
+                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),
+                data["description"],
+                "",
+                "",
+                "معلق",
+                "",
+                "",
             ], sheet_name)
             context.user_data.clear()
             if ok:
@@ -1170,23 +1159,18 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             data["description"] = text
             sheet_name = get_tenant_sheet(context, chat_id)
             code = G001("Doc", "Documents", sheet_name)
-            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Documents الفعلية:
-            # doc_code | topic_code | doc_type | doc_name | file_extension |
-            # drive_link | uploaded_by | upload_date | status | approval_date | notes
-            # ملحوظة: طلب المستندات ده لسه معندوش ملف فعلي (بيسبق الرفع)،
-            # فبنستخدم doc_name لتسجيل اسم الجهة، وnotes لوصف الطلب.
             ok = P003("Documents", [
-                code,                     # A doc_code
-                "",                       # B topic_code (غير مرتبط بموضوع محدد)
-                "طلب مستندات",             # C doc_type
-                data["entity"],           # D doc_name (اسم الجهة)
-                "",                       # E file_extension
-                "",                       # F drive_link (لسه مفيش ملف)
-                "",                       # G uploaded_by
-                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),  # H upload_date
-                "مطلوب",                  # I status
-                "",                       # J approval_date
-                data["description"],      # K notes (وصف المطلوب)
+                code,
+                "",
+                "طلب مستندات",
+                data["entity"],
+                "",
+                "",
+                "",
+                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),
+                "مطلوب",
+                "",
+                data["description"],
             ], sheet_name)
             context.user_data.clear()
             if ok:
@@ -1205,8 +1189,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(text):
-                    P004("Documents", i, 9, "موافق عليه", sheet_name)   # عمود I = status
-                    P004("Documents", i, 10, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)  # عمود J = approval_date
+                    P004("Documents", i, 9, "موافق عليه", sheet_name)
+                    P004("Documents", i, 10, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تمت الموافقة على المستند!*\n\n🔹 الكود: `{text}`\n📄 {doc.get('doc_name','—')}", back_btn)
@@ -1232,8 +1216,8 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["doc_code"]):
-                    P004("Documents", i, 9, "مرفوض", sheet_name)   # عمود I = status
-                    P004("Documents", i, 11, text, sheet_name)     # عمود K = notes (سبب الرفض)
+                    P004("Documents", i, 9, "مرفوض", sheet_name)
+                    P004("Documents", i, 11, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم رفض المستند!*\n\n🔹 الكود: `{data['doc_code']}`\n📝 السبب: {text}", back_btn)
@@ -1337,9 +1321,9 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Custody", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["fund_code"]):
-                    P004("Custody", i, 5, "مسوّاة", sheet_name)  # عمود E = payment_status
-                    P004("Custody", i, 6, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)  # عمود F = actual_payment
-                    P004("Custody", i, 7, text, sheet_name)  # عمود G = notes
+                    P004("Custody", i, 5, "مسوّاة", sheet_name)
+                    P004("Custody", i, 6, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)
+                    P004("Custody", i, 7, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسوية العهدة!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 {data['amount']} جنيه", back_btn)
@@ -1577,7 +1561,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Documents", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(r.get("topic_code", "")) == str(topic_code):
-                    P004("Documents", i, 9, "مؤرشف", sheet_name)  # عمود I = status
+                    P004("Documents", i, 9, "مؤرشف", sheet_name)
         context.user_data.clear()
         await query.edit_message_text(
             f"✅ تم أرشفة مستندات الموضوع `{topic_code}`",
@@ -1595,7 +1579,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Topics", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(topic_code):
-                    P004("Topics", i, 9, "مؤرشف", sheet_name)  # عمود I = status
+                    P004("Topics", i, 9, "مؤرشف", sheet_name)
                     break
         context.user_data.clear()
         await query.edit_message_text(
@@ -1614,7 +1598,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Topics", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(topic_code):
-                    P004("Topics", i, 9, new_status, sheet_name)  # عمود I = status
+                    P004("Topics", i, 9, new_status, sheet_name)
                     break
         context.user_data.clear()
         await query.edit_message_text(
@@ -1706,21 +1690,18 @@ async def file_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 return
 
             code = G001("Doc", "Documents", sheet_name)
-            # ترتيب الأعمدة هنا لازم يطابق عناوين شيت Documents الفعلية:
-            # doc_code | topic_code | doc_type | doc_name | file_extension |
-            # drive_link | uploaded_by | upload_date | status | approval_date | notes
             P003("Documents", [
-                code,                                          # A doc_code
-                topic_code,                                    # B topic_code
-                "",                                             # C doc_type
-                data.get("doc_name", file_name),                # D doc_name
-                suffix,                                         # E file_extension
-                drive_link,                                     # F drive_link
-                "",                                             # G uploaded_by
-                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),      # H upload_date
-                "وارد",                                          # I status
-                "",                                             # J approval_date
-                "",                                             # K notes
+                code,
+                topic_code,
+                "",
+                data.get("doc_name", file_name),
+                suffix,
+                drive_link,
+                "",
+                NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),
+                "وارد",
+                "",
+                "",
             ], sheet_name)
 
             context.user_data.clear()
