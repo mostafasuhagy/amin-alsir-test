@@ -924,6 +924,10 @@ def C003(sheet_name=SHEET_NAME):
         today = datetime.now().date()
         upcoming = []
         for r in records:
+            # لو الحدث اتسجلت نتيجته بالفعل (عمود result مليان)،
+            # يبقى مش "تحت المتابعة" تاني، بغض النظر عن تاريخه.
+            if str(r.get("result", "")).strip():
+                continue
             date_val = r.get("event_date", "") or r.get("date", "")
             for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
                 try:

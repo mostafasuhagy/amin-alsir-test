@@ -1156,8 +1156,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             records = P005("Events", sheet_name)
             for i, r in enumerate(records, start=2):
                 if str(list(r.values())[0]) == str(data["event_code"]):
-                    P004("Events", i, 8, text, sheet_name)
-                    P004("Events", i, 9, "منتهي", sheet_name)
+                    P004("Events", i, 8, text, sheet_name)  # عمود H = result
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسجيل النتيجة!*\n\n📝 {data['result']}", back_btn)
