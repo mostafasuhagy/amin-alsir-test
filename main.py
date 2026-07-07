@@ -199,10 +199,13 @@ def paymob_webhook():
 
 def activate_tenant(tenant_code: str, billing_cycle: str):
     try:
-        records = P005("Tenants")
+        records = P005("Tenants", TENANTS_SHEET)
+        found = False
         for i, r in enumerate(records, start=2):
             if str(r.get("tenant_code", "")).strip() == str(tenant_code).strip():
-                P004("Tenants", i, 9, "active")  # العمود I = status
+                found = True
+                ok = P004("Tenants", i, 9, "active", TENANTS_SHEET)  # العمود I = status
+                print(f"🔎 activate_tenant: P004 write result for row {i} = {ok}")
                 chat_id = r.get("chat_id", "")
                 if chat_id:
                     send_telegram_message_sync(
@@ -210,6 +213,8 @@ def activate_tenant(tenant_code: str, billing_cycle: str):
                         "✅ *تم تفعيل اشتراكك بنجاح!*\n\nمرحباً بك في أمين السر 🏛️",
                     )
                 break
+        if not found:
+            print(f"⚠️ activate_tenant: tenant_code '{tenant_code}' غير موجود في شيت Tenants ({TENANTS_SHEET})")
     except Exception as e:
         print(f"❌ activate_tenant error: {e}")
 
