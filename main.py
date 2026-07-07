@@ -716,6 +716,29 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     tenant = MT001(chat_id)
 
+    if tenant and tenant.get("status") == "pending_payment":
+        # نفس مبدأ إصلاح مسار "plan_" — حساب لسه مستني الدفع، فلازم
+        # نولّد رابط دفع بدل ما نوريه لوحة القيادة من غير أي رابط.
+        tenant_code = tenant.get("tenant_code", "")
+        office_name = tenant.get("office_name", "المكتب")
+        billing_cycle = tenant.get("billing_cycle", "") or "monthly"
+        cycle_label = "شهري" if billing_cycle == "monthly" else "سنوي (الباقة الذهبية)"
+        pay_link = create_payment_link(tenant_code, billing_cycle, office_name)
+        if pay_link:
+            await update.message.reply_text(
+                f"🏛️ *مرحباً بك مجدداً!*\n\n"
+                f"🏢 {office_name}\n"
+                f"📦 الباقة: *{cycle_label}*\n\n"
+                f"حسابك لسه في انتظار تأكيد الدفع. لإتمام الدفع، اضغط الرابط التالي:\n"
+                f"🔗 {pay_link}",
+                parse_mode="Markdown",
+            )
+        else:
+            await update.message.reply_text(
+                "⚠️ حدث خطأ مؤقت في توليد رابط الدفع. حاول مرة أخرى أو تواصل مع الدعم."
+            )
+        return
+
     if tenant and tenant.get("status") in EXISTING_TENANT_STATUSES:
         office_name = tenant.get("office_name", "المكتب")
         country = tenant.get("country", "مصر")
