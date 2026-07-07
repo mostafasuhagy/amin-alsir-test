@@ -1511,6 +1511,26 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         country = data.replace("COUNTRY-", "")
         office_name = context.user_data.get("data", {}).get("office_name", "")
 
+        existing_tenant = MT001(chat_id)
+        if existing_tenant:
+            # حماية من الضغط المزدوج على الزرار: لو المكتب اتسجل
+            # بالفعل لنفس chat_id (حتى لو من ضغطة سابقة خلال نفس
+            # الثواني)، منعيدش إنشاء شيت/فولدر/صف Tenants جديد —
+            # كده كان بيسبب شيتات وفولدرات مكررة على Drive.
+            print(f"⚠️ COUNTRY- handler: chat_id {chat_id} already has tenant {existing_tenant.get('tenant_code','')} — skipping duplicate creation")
+            context.user_data.clear()
+            context.user_data["tenant"] = existing_tenant
+            dashboard_url = build_boss_dashboard_url(chat_id, existing_tenant)
+            try:
+                await query.edit_message_text(
+                    "✅ تم العثور على تسجيل سابق لمكتبك بالفعل — تم تجاهل الطلب المكرر.\n\n"
+                    f"🔗 لوحة القيادة:\n{dashboard_url}",
+                    reply_markup=main_keyboard(),
+                )
+            except Exception:
+                pass
+            return
+
         sheet_name, sheet_id = MT006(office_name, str(chat_id))
         folder_id = MT007(str(chat_id))
 
