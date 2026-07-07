@@ -5,7 +5,7 @@ from telegram.ext import (
 )
 from routines import *
 from primitives import *
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import base64
 
@@ -85,6 +85,42 @@ def create_payment_link(tenant_code: str, billing_cycle: str, office_name: str =
     except Exception as e:
         print(f"❌ create_payment_link error: {e}")
         return None
+
+
+PENDING_PAYMENT_EXPIRY_HOURS = 48
+
+async def cleanup_stale_pending_tenants(context: ContextTypes.DEFAULT_TYPE = None):
+    """
+    يفحص شيت Tenants دوريًا. أي مكتب فضل بحالة pending_payment لأكتر
+    من PENDING_PAYMENT_EXPIRY_HOURS ساعة من غير ما يكمل الدفع، بيتحول
+    لحالة "expired_registration" بدل ما يفضل متراكم كـ pending للأبد.
+
+    ملاحظة: ده بيغيّر الـ status بس — مش بيحذف الشيت ولا فولدر الـ Drive
+    بتاعه، عشان يفضل ممكن نراجعه يدويًا بعدين لو احتجنا.
+    """
+    try:
+        records = P005("Tenants", TENANTS_SHEET)
+        now = datetime.now()
+        for i, r in enumerate(records, start=2):
+            if str(r.get("status", "")).strip() != "pending_payment":
+                continue
+            date_added_raw = str(r.get("date_added", "")).strip()
+            if not date_added_raw:
+                continue
+            added_at = None
+            for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+                try:
+                    added_at = datetime.strptime(date_added_raw, fmt)
+                    break
+                except ValueError:
+                    continue
+            if not added_at:
+                continue
+            if now - added_at > timedelta(hours=PENDING_PAYMENT_EXPIRY_HOURS):
+                P004("Tenants", i, 9, "expired_registration", TENANTS_SHEET)  # عمود I = status
+                print(f"🧹 Cleanup: tenant {r.get('tenant_code','')} marked expired_registration (was pending_payment since {date_added_raw})")
+    except Exception as e:
+        print(f"❌ cleanup_stale_pending_tenants error: {e}")
 
 
 flask_app = Flask(__name__)
@@ -1764,6 +1800,11 @@ if __name__ == "__main__":
     app.add_handler(CallbackQueryHandler(menu_router))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_router))
     app.add_handler(MessageHandler(filters.Document.ALL | filters.PHOTO, file_router))
+
+    if app.job_queue:
+        app.job_queue.run_repeating(cleanup_stale_pending_tenants, interval=6 * 3600, first=60)
+    else:
+        print("⚠️ job_queue غير متاح — تأكد إن مكتبة python-telegram-bot[job-queue] متثبتة (requirements.txt)")
 
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
