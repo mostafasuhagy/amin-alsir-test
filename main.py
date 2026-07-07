@@ -677,9 +677,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"🏛️ *مرحباً بك مجدداً!*\n\n"
                         f"🏢 {office_name}\n"
                         f"📦 الباقة: *{cycle_label}*\n\n"
-                        f"لإتمام الدفع، اضغط الرابط التالي:\n"
-                        f"🔗 {pay_link}",
+                        f"اضغط الزر تحت لإتمام الدفع:",
                         parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💳 ادفع الآن", url=pay_link)]]),
                     )
                 else:
                     await update.message.reply_text(
@@ -729,9 +729,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"🏛️ *مرحباً بك مجدداً!*\n\n"
                 f"🏢 {office_name}\n"
                 f"📦 الباقة: *{cycle_label}*\n\n"
-                f"حسابك لسه في انتظار تأكيد الدفع. لإتمام الدفع، اضغط الرابط التالي:\n"
-                f"🔗 {pay_link}",
+                f"حسابك لسه في انتظار تأكيد الدفع. اضغط الزر تحت لإتمام الدفع:",
                 parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💳 ادفع الآن", url=pay_link)]]),
             )
         else:
             await update.message.reply_text(
@@ -772,10 +772,10 @@ async def testpay(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if link:
         await update.message.reply_text(
             f"✅ *تم إنشاء رابط الدفع التجريبي!*\n\n"
-            f"🔹 Tenant Code: `{test_tenant_code}`\n"
-            f"🔗 {link}\n\n"
-            f"دوس على الرابط وجرّب الدفع ببيانات كارت تجريبي من Paymob.",
-            parse_mode="Markdown"
+            f"🔹 Tenant Code: `{test_tenant_code}`\n\n"
+            f"دوس الزر تحت وجرّب الدفع ببيانات كارت تجريبي من Paymob.",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💳 ادفع الآن (تجريبي)", url=link)]]),
         )
     else:
         await update.message.reply_text("❌ فشل إنشاء رابط الدفع. شوف الـ Logs على Railway لمعرفة السبب.")
@@ -1543,10 +1543,10 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         f"🌍 {country}\n"
                         f"🔹 الكود: `{code}`\n"
                         f"📦 الباقة المختارة: {cycle_label}\n\n"
-                        f"للمتابعة، يرجى إكمال الدفع عبر الرابط التالي:\n"
-                        f"🔗 {pay_link}\n\n"
+                        f"اضغط الزر تحت لإتمام الدفع.\n\n"
                         f"بعد إتمام الدفع بنجاح، سيتم تفعيل حسابك فوراً وتلقائياً.",
                         parse_mode="Markdown",
+                        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💳 ادفع الآن", url=pay_link)]]),
                     )
                 else:
                     await query.edit_message_text(
