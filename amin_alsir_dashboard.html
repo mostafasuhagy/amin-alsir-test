@@ -317,7 +317,7 @@ body { font-family: var(--font); background: var(--gold); color: var(--navy); mi
     <div class="modal-handle"></div>
     <div class="modal-title">☁️ محفوظاتي على Drive<button class="modal-close" onclick="closeModal('myDrive')">✕</button></div>
     <p style="color:var(--navy2);font-size:13px;margin-bottom:16px">ملفاتك المحفوظة في Google Drive</p>
-    <button class="btn-primary" onclick="openLink('https://drive.google.com')">🔗 فتح Google Drive</button>
+    <button class="btn-primary" onclick="openMyDrive()">🔗 فتح Google Drive</button>
     <button class="btn-secondary" onclick="closeModal('myDrive')">إغلاق</button>
   </div>
 </div>
@@ -328,7 +328,16 @@ function getSheetIdFromUrl() {
   const sid = params.get('sid');
   return sid || '1NvrC7PUQZreA9sATJCK4fgb06067NYmQPBaZVS0qSBk'; // fallback آمن لشيت مستر جمال
 }
+function getFolderIdFromUrl() {
+  // كود فولدر Drive الخاص بالمكتب — بييجي في رابط اللوحة الجديد فقط.
+  // الروابط القديمة (اللي اتبعتت قبل الإصلاح) مفيهاش القيمة دي، فبنرجع
+  // فاضي عشان زرار "محفوظاتي" يعتمد على فتح Drive العام كـ fallback آمن،
+  // بدل ما يفتح فولدر مكتب تاني بالغلط.
+  const params = new URLSearchParams(window.location.search);
+  return params.get('folder') || '';
+}
 const SHEET_ID   = getSheetIdFromUrl();
+const FOLDER_ID  = getFolderIdFromUrl();
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymzKVmGgxqgJBFVf91HGzieUsNJQtEU9E1xu97Jkb73Q9VxycorCXDca1laq3Uwdfw/exec';
 let allClients = [], allTopics = [], allEvents = [], allAssistants = [], currentSection = 'main';
 window.onload = async () => { await loadAllData(); document.getElementById('loading').style.opacity='0'; setTimeout(()=>document.getElementById('loading').style.display='none',500); };
@@ -355,6 +364,15 @@ function openModal(name){document.getElementById('modal-'+name).classList.add('o
 function closeModal(name){document.getElementById('modal-'+name).classList.remove('open');}
 function showToast(msg,isError=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isError?' error':'');t.style.display='block';setTimeout(()=>t.style.display='none',3000);}
 function openLink(url){window.open(url,'_blank');}
+function openMyDrive(){
+  // فولدر Drive الخاص بالمكتب لو الرابط الحالي فيه كوده — ده بيضمن كل
+  // مكتب يوصل لفولدره هو بس. لو الرابط قديم (مفيهوش الكود)، بنفتح
+  // Drive العام كـ fallback بدل ما نخمّن فولدر حد تاني.
+  const url = FOLDER_ID
+    ? `https://drive.google.com/drive/folders/${FOLDER_ID}`
+    : 'https://drive.google.com';
+  openLink(url);
+}
 </script>
 
 
