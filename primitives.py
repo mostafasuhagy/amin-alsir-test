@@ -250,6 +250,17 @@ def MT007(tenant_code):
         ).execute()
         folder_id = folder.get("id")
         print(f"✅ MT007: تم إنشاء مجلد Drive — {folder_name} ({folder_id})")
+
+        try:
+            service.permissions().create(
+                fileId=folder_id,
+                body={"type": "anyone", "role": "reader"},
+                supportsAllDrives=True
+            ).execute()
+            print(f"✅ MT007: تم تفعيل القراءة العامة للفولدر (Anyone with the link - Viewer)")
+        except Exception as e:
+            print(f"⚠️ MT007: فشل تفعيل القراءة العامة للفولدر — {e}")
+
         return folder_id
 
     except Exception as e:
@@ -924,10 +935,6 @@ def C003(sheet_name=SHEET_NAME):
         today = datetime.now().date()
         upcoming = []
         for r in records:
-            # لو الحدث اتسجلت نتيجته بالفعل (عمود result مليان)،
-            # يبقى مش "تحت المتابعة" تاني، بغض النظر عن تاريخه.
-            if str(r.get("result", "")).strip():
-                continue
             date_val = r.get("event_date", "") or r.get("date", "")
             for fmt in ("%d/%m/%Y", "%Y-%m-%d", "%d-%m-%Y"):
                 try:
