@@ -413,7 +413,8 @@ async def _save_new_topic(context, chat_id, data, assistant_code="", assistant_n
 def build_boss_dashboard_url(chat_id, tenant):
     token = base64.b64encode(str(chat_id).encode()).decode()
     sheet_id = tenant.get("sheet_id", "")
-    return f"https://aminalserr.com/amin_alsir_dashboard.html?t={token}&sid={sheet_id}"
+    folder_id = tenant.get("drive_folder_id", "")
+    return f"https://aminalserr.com/amin_alsir_dashboard.html?t={token}&sid={sheet_id}&folder={folder_id}"
 
 async def check_subscription_or_block(update, context, chat_id) -> bool:
     result = MT008(chat_id)
