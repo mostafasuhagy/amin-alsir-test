@@ -1263,18 +1263,22 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 context.user_data.clear()
                 return
             code = G001("Sh", "Shipments", sheet_name)
+            # ترتيب أعمدة Shipments: shipment_code, topic_code, sender, receiver,
+            # send_date, file_name, file_type, pickup_location, receive_status,
+            # receive_date, notes — الوصف بيتخزن في notes (آخر عمود) عشان RS003
+            # بيقرا منه بنفس الاسم بالظبط. متنقلش مكانه من غير ما تعدّل RS003 كمان.
             ok = P003("Shipments", [
                 code,
                 data["topic_code"],
                 "",
                 "",
                 NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")),
-                data["description"],
+                "",
                 "",
                 "",
                 "معلق",
                 "",
-                "",
+                data["description"],
             ], sheet_name)
             context.user_data.clear()
             if ok:
@@ -1320,7 +1324,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"📦 *تتبع الشحنة*\n\n"
                 f"🔹 الكود: `{text}`\n"
                 f"📋 الموضوع: {shipment.get('topic_code','—')}\n"
-                f"📝 المحتوى: {shipment.get('sender','—')}\n"
+                f"📝 المحتوى: {shipment.get('notes','—')}\n"
                 f"🔄 الحالة: {shipment.get('receive_status','—')}\n"
                 f"📅 تاريخ الإرسال: {shipment.get('send_date','—')}"
             )
