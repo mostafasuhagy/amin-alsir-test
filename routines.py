@@ -48,11 +48,11 @@ async def RE002(update, context):
     context.user_data["step"] = "event_code"
 
 async def RE003(update, context):
-    # لازم نحدد شيت المكتب الصح قبل عرض الأحداث، وإلا هيعرض
-    # أحداث الشيت العام الافتراضي بدل أحداث المكتب الفعلي.
     chat_id = update.effective_chat.id
-    tenant = context.user_data.get("tenant") or MT001(chat_id) or {}
-    sheet_name = tenant.get("sheet_name", SHEET_NAME)
+    sheet_name = get_tenant_sheet(context, chat_id)
+    if not sheet_name:
+        await T001(context, chat_id, "❌ تعذر التحقق من حسابك. أرسل /start.")
+        return
 
     events = C003(sheet_name)
     if not events:

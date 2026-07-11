@@ -1,4 +1,4 @@
-import os
+﻿import os
 import re
 import json
 import gspread
@@ -68,6 +68,31 @@ def MT001(chat_id):
     except Exception as e:
         print(f"❌ MT001: {e}")
         return None
+
+# ─────────────────────────────────────────────
+# get_tenant_sheet — منقولة هنا من main.py (بدل ما تتكرر منطقها)
+# عشان أي كود في routines.py (زي RE003) يقدر يستخدمها بنفس الحاجز
+# الأمان الموحّد، مش يبني نسخة تانية بمنطق مختلف بالغلط.
+# ─────────────────────────────────────────────
+def get_tenant_sheet(context, chat_id):
+    tenant = context.user_data.get("tenant", {})
+    sheet_name = tenant.get("sheet_name", "")
+    if sheet_name:
+        return sheet_name
+
+    if chat_id:
+        reloaded = MT001(chat_id)
+        if reloaded:
+            context.user_data["tenant"] = reloaded
+            reloaded_name = reloaded.get("sheet_name", "")
+            if reloaded_name:
+                return reloaded_name
+
+    # 🔒 حاجز أمان أخير: مفيش tenant حقيقي لصاحب الـ chat_id ده —
+    # نرجع None بدل SHEET_NAME عشان أي كود كاتب يوقف بوضوح
+    # بدل ما يكتب صامت في شيت Tenants الرئيسي المشترك
+    print(f"⚠️ get_tenant_sheet: لم يتم إيجاد tenant لـ chat_id={chat_id} — تم رفض الكتابة")
+    return None
 
 def MT002(chat_id, office_name, country, boss_chat_id, sheet_name, drive_folder_id="",
            status="trial", billing_cycle="", sheet_id=""):
@@ -185,7 +210,7 @@ def MT006(office_name, tenant_code):
             {"range": "Events!A1",        "values": [["work_order_no", "event_date", "topic_code", "client_name", "event_type", "event_time", "location_court", "result", "next_appointment", "notes", "attachments"]]},
             {"range": "Documents!A1",     "values": [["doc_code", "topic_code", "doc_type", "doc_name", "file_extension", "drive_link", "uploaded_by", "upload_date", "status", "approval_date", "notes"]]},
             {"range": "Shipments!A1",     "values": [["shipment_code", "topic_code", "sender", "receiver", "send_date", "file_name", "file_type", "pickup_location", "receive_status", "receive_date", "notes"]]},
-            {"range": "Custody!A1",       "values": [["custody_code", "responsible_code", "amount", "payment_due", "payment_status", "actual_payment_date", "notes"]]},
+            {"range": "Custody!A1",       "values": [["custody_code", "responsible_code", "amount", "payment_due", "payment_status", "actual_payment_date", "notes", "settlement_notes"]]},
             {"range": "Assistants!A1",    "values": [["assistant_code", "assistant_name", "bar_number", "mobile", "date_added", "notes", "attachments_code", "telegram_chat_id"]]},
             {"range": "Notifications!A1", "values": [["notification_code", "type", "ref_code", "name", "message", "date"]]},
             {"range": "Services!A1",      "values": [["service_code", "service_name", "date_added", "notes"]]},
@@ -453,8 +478,15 @@ def P006(tab, col_name, value, sheet_name=SHEET_NAME):
 
 def G001(prefix, tab, sheet_name=SHEET_NAME):
     try:
-        count = len(P005(tab, sheet_name)) + 1
-        return f"{prefix}-{count:03d}"
+        records = P005(tab, sheet_name)
+        max_num = 0
+        for r in records:
+            code = str(list(r.values())[0]).strip()
+            if code.startswith(f"{prefix}-"):
+                suffix = code.split("-")[-1]
+                if suffix.isdigit():
+                    max_num = max(max_num, int(suffix))
+        return f"{prefix}-{max_num + 1:03d}"
     except Exception as e:
         print(f"❌ G001: {e}")
         return f"{prefix}-001"

@@ -330,25 +330,8 @@ def get_boss_id(context):
             pass
     return BOSS_CHAT_ID
 
-def get_tenant_sheet(context, chat_id):
-    tenant = context.user_data.get("tenant", {})
-    sheet_name = tenant.get("sheet_name", "")
-    if sheet_name:
-        return sheet_name
-
-    if chat_id:
-        reloaded = MT001(chat_id)
-        if reloaded:
-            context.user_data["tenant"] = reloaded
-            reloaded_name = reloaded.get("sheet_name", "")
-            if reloaded_name:
-                return reloaded_name
-
-    # 🔒 حاجز أمان أخير: مفيش tenant حقيقي لصاحب الـ chat_id ده —
-    # نرجع None بدل SHEET_NAME عشان أي كود كاتب يوقف بوضوح
-    # بدل ما يكتب صامت في شيت Tenants الرئيسي المشترك
-    print(f"⚠️ get_tenant_sheet: لم يتم إيجاد tenant لـ chat_id={chat_id} — تم رفض الكتابة")
-    return None
+# get_tenant_sheet انتقلت إلى primitives.py (عشان تبقى متاحة لأي كود
+# في routines.py برضو، زي RE003، بدل ما تفضل محصورة في main.py بس)
 
 async def _save_new_custody(context, chat_id, data, responsible_code="", payment_due=""):
     """
@@ -1545,7 +1528,7 @@ async def text_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 if str(list(r.values())[0]) == str(data["fund_code"]):
                     P004("Custody", i, 5, "مسوّاة", sheet_name)
                     P004("Custody", i, 6, NOW_LOCAL(context.user_data.get("tenant", {}).get("country", "مصر")), sheet_name)
-                    P004("Custody", i, 7, text, sheet_name)
+                    P004("Custody", i, 8, text, sheet_name)
                     break
             context.user_data.clear()
             await T002(context, chat_id, f"✅ *تم تسوية العهدة!*\n\n🔹 الكود: `{data['fund_code']}`\n💰 {data['amount']} جنيه", back_btn)
