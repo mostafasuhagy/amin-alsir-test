@@ -629,7 +629,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 records = P005("Assistants", sheet_name)
                 for i, r in enumerate(records, start=2):
                     if str(list(r.values())[0]).strip().lower() == str(ref_code).strip().lower():
-                        P004("Assistants", i, 6, str(chat_id), sheet_name)
+                        P004("Assistants", i, 8, str(chat_id), sheet_name)
                         break
                 await update.message.reply_text(
                     f"✅ *تم ربط حسابك بنجاح!*\n\n"
