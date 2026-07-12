@@ -4,7 +4,7 @@ import json
 import gspread
 import hashlib
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from google.oauth2.service_account import Credentials
 
 SHEET_NAME = "amin_alsir_cases_new_V2"
@@ -13,6 +13,9 @@ DRIVE_FOLDER_ID = "1_T8yAzq62a28jDcX93W-DHLEF5E_YUee"
 SHARED_DRIVE_ID = "0AGGAp8sywzBkUk9PVA"
 TENANTS_SHEET = "amin_alsir_cases_new_V2"
 TRIAL_DAYS = 7
+# فترة سماح بعد انتهاء الاشتراك المدفوع (شهري/سنوي) بس — التجربة المجانية
+# (trial) بتتقفل فورًا زي ما هي من غير سماح، عشان تشجع على الاشتراك بسرعة.
+GRACE_PERIOD_DAYS = 3
 
 SCOPES = [
     "https://spreadsheets.google.com/feeds",
@@ -332,12 +335,20 @@ def MT008(chat_id):
             if end_date_str:
                 try:
                     end_date = datetime.strptime(str(end_date_str).strip(), "%Y-%m-%d").date()
-                    if today > end_date:
-                        update_tenant_status(chat_id, "subscription_expired")
-                        tenant["status"] = "subscription_expired"
-                        return {"valid": False, "status": "subscription_expired", "days_left": 0, "tenant": tenant}
-                    days_left = (end_date - today).days
-                    return {"valid": True, "status": "active", "days_left": days_left, "tenant": tenant}
+                    if today <= end_date:
+                        days_left = (end_date - today).days
+                        return {"valid": True, "status": "active", "days_left": days_left, "tenant": tenant}
+
+                    # الاشتراك انتهى — نشوف هل لسه جوه فترة السماح
+                    days_since_expiry = (today - end_date).days
+                    grace_days_left = GRACE_PERIOD_DAYS - days_since_expiry
+                    if grace_days_left > 0:
+                        return {"valid": True, "status": "grace_period", "days_left": grace_days_left, "tenant": tenant}
+
+                    # فترة السماح خلصت كمان — يتقفل الحساب فعليًا
+                    update_tenant_status(chat_id, "subscription_expired")
+                    tenant["status"] = "subscription_expired"
+                    return {"valid": False, "status": "subscription_expired", "days_left": 0, "tenant": tenant}
                 except Exception:
                     pass
             # active بدون subscription_end_date محدد — نعتبره سليم (حالة استثنائية)

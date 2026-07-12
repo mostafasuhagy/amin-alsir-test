@@ -206,6 +206,15 @@ def activate_tenant(tenant_code: str, billing_cycle: str):
                 found = True
                 ok = P004("Tenants", i, 9, "active", TENANTS_SHEET)  # العمود I = status
                 print(f"🔎 activate_tenant: P004 write result for row {i} = {ok}")
+
+                # حساب تاريخ انتهاء الاشتراك حسب دورة الفوترة، وتسجيله
+                # في العمود M (subscription_end_date) — من غيره MT008 كانت
+                # بتعتبر أي اشتراك "active" سليم للأبد من غير تاريخ انتهاء.
+                days_to_add = 365 if billing_cycle == "yearly" else 30
+                end_date = (datetime.now() + timedelta(days=days_to_add)).strftime("%Y-%m-%d")
+                ok_date = P004("Tenants", i, 13, end_date, TENANTS_SHEET)  # العمود M = subscription_end_date
+                print(f"🔎 activate_tenant: subscription_end_date للصف {i} = {end_date} (نجح: {ok_date})")
+
                 chat_id = r.get("chat_id", "")
                 if chat_id:
                     send_telegram_message_sync(
@@ -413,6 +422,31 @@ def build_boss_dashboard_url(chat_id, tenant):
 
 async def check_subscription_or_block(update, context, chat_id) -> bool:
     result = MT008(chat_id)
+
+    if result["status"] == "grace_period":
+        tenant = result.get("tenant") or {}
+        days_left = result.get("days_left")
+        billing_cycle = tenant.get("billing_cycle", "")
+        tenant_code = tenant.get("tenant_code", "")
+        warn_text = (
+            f"🚨 *اشتراكك انتهى!*\n\n"
+            f"باقي {days_left} يوم فقط ضمن فترة السماح قبل إيقاف حسابك تمامًا. "
+            f"جدّد الآن لتجنب انقطاع الخدمة."
+        )
+        if billing_cycle:
+            pay_link = create_payment_link(tenant_code, billing_cycle, tenant.get("office_name", ""))
+            if pay_link:
+                kb = InlineKeyboardMarkup([[InlineKeyboardButton("💳 جدّد الآن", url=pay_link)]])
+                await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown", reply_markup=kb)
+            else:
+                await context.bot.send_message(chat_id=chat_id, text=warn_text, parse_mode="Markdown")
+        else:
+            kb = InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"📅 شهري — {SUBSCRIPTION_MONTHLY:.0f} جنيه", callback_data=f"PAY-monthly-{tenant_code}")],
+                [InlineKeyboardButton(f"🌟 سنوي — {SUBSCRIPTION_YEARLY:.0f} جنيه", callback_data=f"PAY-yearly-{tenant_code}")],
+            ])
+            await context.bot.send_message(chat_id=chat_id, text=warn_text + "\n\nاختر الباقة المناسبة لك:", parse_mode="Markdown", reply_markup=kb)
+        return True
 
     if result["valid"]:
         tenant = result.get("tenant") or {}
